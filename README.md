@@ -7,6 +7,7 @@ Interface en ligne de commande pour interroger ServiceNow en langage naturel, pr
 - Python 3.10 ou supérieur
 - Un compte Anthropic avec une clé API ([console.anthropic.com](https://console.anthropic.com))
 - Accès au repo GitHub (demander à l'administrateur)
+- Le token secret du serveur MCP (demander à l'administrateur)
 
 ## Installation
 
@@ -31,13 +32,16 @@ Crée un fichier `.env` à la racine du projet :
 touch .env
 ```
 
-Ouvre-le et ajoute ta clé API Anthropic :
+Ouvre-le et ajoute tes deux variables :
 
 ```
 ANTHROPIC_API_KEY=sk-ant-xxxxxxxxxxxxxxxx
+MCP_SECRET_TOKEN=token_fourni_par_l_administrateur
 ```
 
-> 💡 Pour obtenir ta clé API : connecte-toi sur [console.anthropic.com](https://console.anthropic.com) > **API Keys** > **Create Key**.
+> 💡 **`ANTHROPIC_API_KEY`** : connecte-toi sur [console.anthropic.com](https://console.anthropic.com) > **API Keys** > **Create Key**.
+>
+> 💡 **`MCP_SECRET_TOKEN`** : ce token sécurise l'accès au serveur ServiceNow. Il est fourni par l'administrateur du projet — ne le partage pas et ne le committe jamais dans Git.
 
 ### 4. Lancer le client
 
@@ -89,7 +93,7 @@ Ce projet propose deux façons d'interroger ServiceNow, toutes les deux via le t
 ─── Option 1 : Client Python → Railway (recommandé) ───────────────
 
 servicenow_api_client.py  →  API Anthropic (Claude)  →  Serveur MCP Railway  →  ServiceNow
-     (ton terminal)               (cloud)                   (cloud)               (cloud)
+     (ton terminal)               (cloud)               (cloud, sécurisé)        (cloud)
 
 ─── Option 2 : Serveur local (Claude Desktop uniquement) ───────────
 
@@ -116,32 +120,33 @@ pip install anthropic python-dotenv
 **`RuntimeError: Variable ANTHROPIC_API_KEY manquante`**
 Vérifie que ton fichier `.env` existe à la racine du projet et contient bien `ANTHROPIC_API_KEY=...`.
 
+**`RuntimeError: Variable MCP_SECRET_TOKEN manquante`**
+Le token secret est requis pour accéder au serveur. Demande-le à l'administrateur du repo et ajoute-le dans ton `.env` : `MCP_SECRET_TOKEN=...`.
+
 **`Erreur API Anthropic : 401`**
-Ta clé API est invalide ou expirée. Génères-en une nouvelle sur [console.anthropic.com](https://console.anthropic.com).
+Ta clé API Anthropic est invalide ou expirée. Génères-en une nouvelle sur [console.anthropic.com](https://console.anthropic.com).
 
 **`Erreur API Anthropic : 400 - Error while communicating with MCP server`**
-Le serveur MCP Railway est peut-être temporairement indisponible. Réessaie dans quelques instants.
+Deux causes possibles : le token `MCP_SECRET_TOKEN` est incorrect, ou le serveur Railway est temporairement indisponible. Vérifie le token puis réessaie dans quelques instants.
 
 **La réponse est vide ou incohérente**
 Le serveur MCP Railway est peut-être en train de redémarrer. Attends 30 secondes et réessaie.
 
 ## Contact
 
-Pour toute question ou problème d'accès, contacte l'administrateur du repo.
+Pour toute question, problème d'accès, ou pour obtenir le `MCP_SECRET_TOKEN`, contacte l'administrateur du repo.
 
 ## Roadmap — Prochaines étapes
 
-### 1. Sécuriser l'accès au serveur (prioritaire)
+### 1. ✅ Sécuriser l'accès au serveur
 
-Le serveur MCP Railway est actuellement **ouvert publiquement** — n'importe qui connaissant l'URL peut interroger ServiceNow. Avant tout déploiement plus large, il faut ajouter une authentification.
+Le serveur MCP Railway est désormais **protégé par un token Bearer**. Chaque requête vers le serveur doit inclure le header `Authorization: Bearer <token>`. Sans ce token, l'accès est refusé.
 
-**Ce qui est à faire :**
-- Générer un token secret (longue chaîne aléatoire)
-- Ajouter une vérification de ce token dans `servicenow_mcp_server.py` (header `Authorization: Bearer ...`)
-- Ajouter ce token en variable d'environnement sur Railway (`MCP_SECRET_TOKEN`)
-- Ajouter ce token dans le `.env` de chaque utilisateur autorisé (`MCP_SECRET_TOKEN=...`)
-
-Sans cette étape, l'URL du serveur ne doit pas être partagée publiquement.
+Ce qui a été mis en place :
+- Token secret généré et stocké dans les variables d'environnement Railway (`MCP_SECRET_TOKEN`)
+- Vérification du token dans `servicenow_mcp_server.py` sur chaque requête entrante
+- Le client `servicenow_api_client.py` envoie automatiquement le token depuis le `.env`
+- En mode local (Claude Desktop / stdio), la vérification est désactivée — seules les connexions depuis la même machine sont acceptées
 
 ---
 
