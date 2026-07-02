@@ -99,7 +99,12 @@ def check_table_allowed(table: str) -> None:
 
 # --- Serveur MCP -------------------------------------------------------------
 
-mcp = FastMCP("servicenow")
+# En mode SSE, host et port sont passés à l initialisation
+mcp = FastMCP(
+    "servicenow",
+    host="0.0.0.0" if os.environ.get("TRANSPORT") == "sse" else "127.0.0.1",
+    port=int(os.environ.get("PORT", 8000)),
+)
 
 
 @mcp.tool()
@@ -181,10 +186,7 @@ def add_comment(table: str, sys_id: str, comment: str) -> dict:
 
 if __name__ == "__main__":
     if TRANSPORT == "sse":
-        # Mode production : HTTP/SSE
-        # FastMCP lit HOST et PORT depuis les variables d environnement nativement
-        os.environ.setdefault("HOST", "0.0.0.0")
-        os.environ.setdefault("PORT", str(PORT))
+        # Mode production : HTTP/SSE (host et port définis à l initialisation)
         mcp.run(transport="sse")
     else:
         # Mode local : stdio pour Claude Desktop
