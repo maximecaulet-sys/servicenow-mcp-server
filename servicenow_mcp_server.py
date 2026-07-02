@@ -181,8 +181,11 @@ def add_comment(table: str, sys_id: str, comment: str) -> dict:
 
 if __name__ == "__main__":
     if TRANSPORT == "sse":
-        # Mode production : HTTP/SSE, Railway injecte PORT automatiquement
-        mcp.run(transport="sse", host="0.0.0.0", port=PORT)
+        # Mode production : HTTP/SSE
+        # FastMCP lit HOST et PORT depuis les variables d environnement nativement
+        os.environ.setdefault("HOST", "0.0.0.0")
+        os.environ.setdefault("PORT", str(PORT))
+        mcp.run(transport="sse")
     else:
         # Mode local : stdio pour Claude Desktop
         mcp.run()
