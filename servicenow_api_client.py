@@ -66,28 +66,27 @@ def ask(question: str) -> str:
 # --- Exemples de requêtes ----------------------------------------------------
 
 if __name__ == "__main__":
+    print("=" * 60)
+    print(" Assistant ServiceNow — propulsé par Claude")
+    print(" Tapez votre question en langage naturel.")
+    print(" Commandes : 'quitter' ou 'exit' pour arrêter.")
+    print("=" * 60)
 
-    exemples = [
-        # Lecture — incidents
-        "Cherche les 5 derniers incidents actifs, donne-moi leur numéro, "
-        "description courte et priorité.",
+    while True:
+        try:
+            question = input("\nVous : ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print("\nAu revoir !")
+            break
 
-        # Lecture — requests
-        "Liste les 3 dernières demandes (sc_request) créées en 2018, "
-        "avec leur numéro et description.",
+        if not question:
+            continue
 
-        # Analyse
-        "Combien d'incidents actifs de priorité 3 ou moins y a-t-il ? "
-        "Donne-moi juste le nombre.",
+        if question.lower() in ("quitter", "exit", "quit"):
+            print("Au revoir !")
+            break
 
-        # Création (commenté par défaut pour éviter les modifications accidentelles)
-        # "Crée un incident avec la description 'Test MCP API' et la priorité 3.",
-    ]
-
-    for i, question in enumerate(exemples, 1):
-        print(f"\n{'='*60}")
-        print(f"Question {i} : {question}")
-        print(f"{'='*60}")
+        print("\nClaude : ", end="", flush=True)
         try:
             reponse = ask(question)
             print(reponse)

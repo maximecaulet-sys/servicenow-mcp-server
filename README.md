@@ -13,7 +13,7 @@ Interface en ligne de commande pour interroger ServiceNow en langage naturel, pr
 ### 1. Cloner le repo
 
 ```bash
-git clone https://github.com/TON_USERNAME/servicenow-mcp-server.git
+git clone https://github.com/maximecaulet/servicenow-mcp-server.git
 cd servicenow-mcp-server
 ```
 
@@ -47,43 +47,64 @@ python3 servicenow_api_client.py
 
 ## Utilisation
 
-Le script exécute automatiquement plusieurs exemples de requêtes sur ServiceNow :
-- Liste des derniers incidents actifs
-- Recherche de demandes (requests)
-- Comptage d'incidents par priorité
+Une fois lancé, le script affiche un prompt interactif dans le terminal :
 
-Pour personnaliser les questions, ouvre `servicenow_api_client.py` et modifie la liste `exemples` en bas du fichier :
-
-```python
-exemples = [
-    "Cherche les 10 derniers incidents de priorité 1",
-    "Y a-t-il des problèmes ouverts non assignés ?",
-    "Liste les demandes en attente depuis plus d'une semaine",
-]
 ```
+============================================================
+ Assistant ServiceNow — propulsé par Claude
+ Tapez votre question en langage naturel.
+ Commandes : 'quitter' ou 'exit' pour arrêter.
+============================================================
+
+Vous : Cherche les 5 derniers incidents actifs
+Claude : ...
+
+Vous : Donne-moi le détail de INC0010001
+Claude : ...
+
+Vous : quitter
+Au revoir !
+```
+
+> ⚠️ **Les questions se posent dans le terminal**, pas dans une interface graphique ou dans Claude.ai. C'est une interface en ligne de commande uniquement.
+
+Tape ta question en langage naturel et appuie sur Entrée. Claude interroge ServiceNow et te répond directement. Pour terminer la session, tape `quitter` ou `exit`.
 
 ## Exemples de questions
 
-Voici quelques exemples de questions que tu peux poser :
-
 ```
-"Cherche les 5 derniers incidents actifs avec leur priorité"
-"Donne-moi le détail de l'incident INC0010001"
-"Liste les demandes de changement ouvertes"
-"Y a-t-il des incidents de priorité 1 en cours ?"
-"Combien d'incidents actifs y a-t-il en ce moment ?"
+Cherche les 5 derniers incidents actifs avec leur priorité
+Donne-moi le détail de l'incident INC0010001
+Liste les demandes de changement ouvertes
+Y a-t-il des incidents de priorité 1 en cours ?
+Combien d'incidents actifs y a-t-il en ce moment ?
+Crée un incident avec la description "Problème réseau" et la priorité 2
 ```
 
 ## Architecture
 
+Ce projet propose deux façons d'interroger ServiceNow, toutes les deux via le terminal :
+
 ```
-servicenow_api_client.py   →   API Anthropic (Claude)   →   Serveur MCP (Railway)   →   ServiceNow
-      (ta machine)                   (cloud)                     (cloud)                   (cloud)
+─── Option 1 : Client Python → Railway (recommandé) ───────────────
+
+servicenow_api_client.py  →  API Anthropic (Claude)  →  Serveur MCP Railway  →  ServiceNow
+     (ton terminal)               (cloud)                   (cloud)               (cloud)
+
+─── Option 2 : Serveur local (Claude Desktop uniquement) ───────────
+
+Claude Desktop  →  servicenow_mcp_server.py (local)  →  ServiceNow
+  (questions                 (ton Mac)                   (cloud)
+ dans le chat)
 ```
 
-- **Le client** (`servicenow_api_client.py`) tourne sur ta machine et envoie tes questions à Claude.
-- **Le serveur MCP** tourne sur Railway et fait le lien avec ServiceNow. Tu n'as pas à t'en occuper.
-- **Les credentials ServiceNow** sont gérés côté serveur — tu n'as besoin que de ta clé API Anthropic.
+**Option 1 — `servicenow_api_client.py` (ce README)**
+Tu lances le script dans ton terminal, tu poses tes questions en langage naturel, Claude répond. Le serveur MCP tourne sur Railway — tu n'as pas à t'en occuper. C'est la méthode recommandée pour tous les utilisateurs.
+
+**Option 2 — Claude Desktop**
+Réservée à l'administrateur du projet. Nécessite d'avoir Python et le repo installés localement, et une configuration spécifique de Claude Desktop (`claude_desktop_config.json`). Permet de poser les questions directement dans l'interface Claude Desktop plutôt que dans le terminal.
+
+> Dans les deux cas, **les questions se posent en ligne de commande ou dans Claude Desktop** — il n'y a pas d'interface web disponible pour l'instant.
 
 ## Dépannage
 
@@ -98,8 +119,11 @@ Vérifie que ton fichier `.env` existe à la racine du projet et contient bien `
 **`Erreur API Anthropic : 401`**
 Ta clé API est invalide ou expirée. Génères-en une nouvelle sur [console.anthropic.com](https://console.anthropic.com).
 
-**La réponse est vide ou incohérente**
+**`Erreur API Anthropic : 400 - Error while communicating with MCP server`**
 Le serveur MCP Railway est peut-être temporairement indisponible. Réessaie dans quelques instants.
+
+**La réponse est vide ou incohérente**
+Le serveur MCP Railway est peut-être en train de redémarrer. Attends 30 secondes et réessaie.
 
 ## Contact
 
