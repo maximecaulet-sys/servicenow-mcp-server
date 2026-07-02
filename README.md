@@ -229,43 +229,35 @@ Redémarre ensuite Claude Desktop pour que le proxy se reconnecte à la nouvelle
 
 ---
 
+## Étendre les fonctionnalités
+
+Tables actuellement autorisées : incident, change_request, sc_request, problem.
+
+Évolutions possibles :
+
+    Ajouter de nouvelles tables selon les besoins (kb_knowledge, cmdb_ci, etc.)
+    Filtrer les champs retournés pour alléger les réponses
+    Ajouter la pagination pour les recherches volumineuses
+    Gérer plusieurs instances ServiceNow depuis le même serveur
+
+
+---
+
+## Gestion des outils
+
+Pour le moment seuls les outils suivants sont disponibles :
+
+    search_records
+    get_record
+    create_record
+    update_record
+    add_comment
+
+Pour les modifier ou en créer de nouveaux il faut modifier `servicenow_mcp_server.py`
+
+---
+
 ## Contact
 
 Pour toute question, problème d'accès, ou pour obtenir le `MCP_SECRET_TOKEN`,
 contacte l'administrateur du repo.
-
----
-
-## Roadmap
-
-### ✅ 1. Sécuriser l'accès au serveur
-
-Token Bearer implémenté. Chaque requête vers Railway est authentifiée.
-- Token vérifié côté serveur (query parameter `?token=...`)
-- Client terminal et proxy local envoient le token automatiquement depuis le `.env`
-- En mode local (stdio), la vérification est désactivée
-
-### ✅ 2. Connecter Claude Desktop via proxy local
-
-Le proxy `servicenow_mcp_proxy.py` permet à Claude Desktop de parler au serveur Railway
-sans supporter nativement les URLs distantes. Claude peut interroger ServiceNow
-directement depuis l'interface de chat.
-
-Quand Claude Desktop supportera le format `"url"` nativement, la config deviendra :
-```json
-"mcpServers": {
-  "servicenow": {
-    "url": "https://servicenow-mcp-server-production-b9fb.up.railway.app/mcp?token=..."
-  }
-}
-```
-
-### 3. Étendre les fonctionnalités
-
-Tables actuellement autorisées : `incident`, `change_request`, `sc_request`, `problem`.
-
-Évolutions possibles :
-- Ajouter de nouvelles tables selon les besoins (`kb_knowledge`, `cmdb_ci`, etc.)
-- Filtrer les champs retournés pour alléger les réponses
-- Ajouter la pagination pour les recherches volumineuses
-- Gérer plusieurs instances ServiceNow depuis le même serveur
