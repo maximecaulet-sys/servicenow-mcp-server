@@ -200,13 +200,32 @@ Génères-en une nouvelle sur [console.anthropic.com](https://console.anthropic.
 
 ---
 
-## Instance ServiceNow connectée
+## Changer d'instance ServiceNow
 
-L'instance cible est configurée côté Railway via la variable `SERVICENOW_INSTANCE_URL`.
-Pour changer d'instance, mettre à jour cette variable (et les credentials associés) dans
-les variables d'environnement du service Railway — Railway redéploie automatiquement.
+L'instance cible est entièrement configurée côté Railway. Pour basculer vers une autre
+instance, il suffit de mettre à jour les variables d'environnement du service
+`servicenow-mcp-server` dans Railway — sans toucher au code ni aux fichiers locaux.
 
-Instance actuellement configurée : voir les variables Railway du service `servicenow-mcp-server`.
+**Variables à mettre à jour dans Railway :**
+
+```
+SERVICENOW_INSTANCE_URL   → https://nouvelle-instance.service-now.com
+SERVICENOW_CLIENT_ID      → client ID OAuth de la nouvelle instance
+SERVICENOW_CLIENT_SECRET  → secret OAuth de la nouvelle instance
+SERVICENOW_USERNAME       → compte de service de la nouvelle instance
+SERVICENOW_PASSWORD       → mot de passe du compte de service
+```
+
+**Ce qui ne change pas :**
+
+- Le code du serveur Railway
+- Le proxy local (`servicenow_mcp_proxy.py`)
+- Le `claude_desktop_config.json`
+- Le `.env` local
+- Le `MCP_SECRET_TOKEN`
+
+Railway redéploie automatiquement dès que tu sauvegardes les variables (~30 secondes).
+Redémarre ensuite Claude Desktop pour que le proxy se reconnecte à la nouvelle instance.
 
 ---
 
