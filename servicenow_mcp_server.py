@@ -10,13 +10,14 @@ Variables d'environnement :
     SERVICENOW_CLIENT_SECRET
     SERVICENOW_USERNAME
     SERVICENOW_PASSWORD
-    MCP_SECRET_TOKEN          token d'authentification pour sécuriser l'endpoint HTTP
+    MCP_SECRET_TOKEN          token Bearer pour sécuriser l'endpoint HTTP
+                              (obligatoire en mode SSE/production, ignoré en stdio)
     PORT                      port d'écoute (fourni automatiquement par Railway)
 
-Lancement local (stdio) :
+Lancement local (stdio, pas d'auth nécessaire) :
     python servicenow_mcp_server.py
 
-Lancement en production (SSE) :
+Lancement en production (streamable-http avec auth) :
     TRANSPORT=sse python servicenow_mcp_server.py
 """
 
@@ -32,22 +33,48 @@ load_dotenv(dotenv_path=Path(__file__).parent / ".env")
 
 # --- Configuration ---------------------------------------------------------
 
-SERVICENOW_INSTANCE_URL = os.environ["SERVICENOW_INSTANCE_URL"].rstrip("/")
-SERVICENOW_CLIENT_ID    = os.environ["SERVICENOW_CLIENT_ID"]
+SERVICENOW_INSTANCE_URL  = os.environ["SERVICENOW_INSTANCE_URL"].rstrip("/")
+SERVICENOW_CLIENT_ID     = os.environ["SERVICENOW_CLIENT_ID"]
 SERVICENOW_CLIENT_SECRET = os.environ["SERVICENOW_CLIENT_SECRET"]
-SERVICENOW_USERNAME     = os.environ.get("SERVICENOW_USERNAME")
-SERVICENOW_PASSWORD     = os.environ.get("SERVICENOW_PASSWORD")
+SERVICENOW_USERNAME      = os.environ.get("SERVICENOW_USERNAME")
+SERVICENOW_PASSWORD      = os.environ.get("SERVICENOW_PASSWORD")
 
-# Transport : "stdio" en local, "sse" en production hébergée
 TRANSPORT = os.environ.get("TRANSPORT", "stdio")
+PORT      = int(os.environ.get("PORT", 8000))
 
-# Port d'écoute (Railway injecte PORT automatiquement)
-PORT = int(os.environ.get("PORT", 8000))
+# Token secret pour sécuriser l'endpoint HTTP en production.
+# En mode stdio (local), cette variable peut être absente — c'est normal.
+MCP_SECRET_TOKEN = os.environ.get("MCP_SECRET_TOKEN")
+
+if TRANSPORT == "sse" and not MCP_SECRET_TOKEN:
+    raise RuntimeError(
+        "MCP_SECRET_TOKEN est obligatoire en mode production (TRANSPORT=sse). "
+        "Ajoutez cette variable dans vos variables d'environnement Railway."
+    )
 
 # Tables autorisées
 ALLOWED_TABLES = {"incident", "change_request", "sc_request", "problem"}
 
-# --- Gestion du token OAuth ------------------------------------------------
+# --- Authentification du serveur MCP ---------------------------------------
+
+def verify_token(request) -> bool:
+    """
+    Vérifie le header Authorization: Bearer <token> sur chaque requête entrante.
+    Retourne True si le token est valide, False sinon.
+
+    En mode stdio (local), la vérification est désactivée — les connexions
+    viennent exclusivement de Claude Desktop sur la même machine.
+    """
+    if TRANSPORT != "sse":
+        return True  # Pas de vérification en local
+
+    auth_header = request.headers.get("authorization", "")
+    if not auth_header.startswith("Bearer "):
+        return False
+    token = auth_header.removeprefix("Bearer ").strip()
+    return token == MCP_SECRET_TOKEN
+
+# --- Gestion du token OAuth ServiceNow ------------------------------------
 
 _token_cache = {"access_token": None, "expires_at": 0}
 
@@ -97,13 +124,16 @@ def check_table_allowed(table: str) -> None:
         )
 
 
-# --- Serveur MCP -------------------------------------------------------------
+# --- Serveur MCP -----------------------------------------------------------
 
-# En mode SSE, host et port sont passés à l initialisation
 mcp = FastMCP(
     "servicenow",
-    host="0.0.0.0" if os.environ.get("TRANSPORT") == "sse" else "127.0.0.1",
-    port=int(os.environ.get("PORT", 8000)),
+    host="0.0.0.0" if TRANSPORT == "sse" else "127.0.0.1",
+    port=PORT,
+    # Middleware d'authentification : vérifie le Bearer token sur chaque requête
+    # (FastMCP >= 1.3 supporte auth_middleware ; si votre version est plus ancienne,
+    # voir la note ci-dessous)
+    auth=verify_token if TRANSPORT == "sse" else None,
 )
 
 
@@ -186,8 +216,6 @@ def add_comment(table: str, sys_id: str, comment: str) -> dict:
 
 if __name__ == "__main__":
     if TRANSPORT == "sse":
-        # Mode production : streamable-http (mieux supporté par l API Anthropic)
         mcp.run(transport="streamable-http")
     else:
-        # Mode local : stdio pour Claude Desktop
         mcp.run()

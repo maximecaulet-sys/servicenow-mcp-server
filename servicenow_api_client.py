@@ -30,6 +30,13 @@ MCP_SERVER_URL = os.environ.get(
     "https://servicenow-mcp-server-production-b9fb.up.railway.app/mcp"
 )
 
+MCP_SECRET_TOKEN = os.environ.get("MCP_SECRET_TOKEN")
+if not MCP_SECRET_TOKEN:
+    raise RuntimeError(
+        "Variable MCP_SECRET_TOKEN manquante dans le .env. "
+        "Récupérez ce token auprès de l'administrateur du serveur MCP."
+    )
+
 MODEL = "claude-sonnet-4-6"
 
 # --- Client ------------------------------------------------------------------
@@ -41,6 +48,9 @@ MCP_SERVERS = [
         "type": "url",
         "url": MCP_SERVER_URL,
         "name": "servicenow",
+        "headers": {
+            "Authorization": f"Bearer {MCP_SECRET_TOKEN}",
+        },
     }
 ]
 
@@ -66,27 +76,28 @@ def ask(question: str) -> str:
 # --- Exemples de requêtes ----------------------------------------------------
 
 if __name__ == "__main__":
-    print("=" * 60)
-    print(" Assistant ServiceNow — propulsé par Claude")
-    print(" Tapez votre question en langage naturel.")
-    print(" Commandes : 'quitter' ou 'exit' pour arrêter.")
-    print("=" * 60)
 
-    while True:
-        try:
-            question = input("\nVous : ").strip()
-        except (EOFError, KeyboardInterrupt):
-            print("\nAu revoir !")
-            break
+    exemples = [
+        # Lecture — incidents
+        "Cherche les 5 derniers incidents actifs, donne-moi leur numéro, "
+        "description courte et priorité.",
 
-        if not question:
-            continue
+        # Lecture — requests
+        "Liste les 3 dernières demandes (sc_request) créées en 2018, "
+        "avec leur numéro et description.",
 
-        if question.lower() in ("quitter", "exit", "quit"):
-            print("Au revoir !")
-            break
+        # Analyse
+        "Combien d'incidents actifs de priorité 3 ou moins y a-t-il ? "
+        "Donne-moi juste le nombre.",
 
-        print("\nClaude : ", end="", flush=True)
+        # Création (commenté par défaut pour éviter les modifications accidentelles)
+        # "Crée un incident avec la description 'Test MCP API' et la priorité 3.",
+    ]
+
+    for i, question in enumerate(exemples, 1):
+        print(f"\n{'='*60}")
+        print(f"Question {i} : {question}")
+        print(f"{'='*60}")
         try:
             reponse = ask(question)
             print(reponse)
