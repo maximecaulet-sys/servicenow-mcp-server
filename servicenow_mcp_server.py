@@ -2,7 +2,7 @@
 Serveur MCP pour intégrer Claude à ServiceNow.
 
 Prérequis :
-    pip install mcp httpx python-dotenv
+    pip install mcp httpx python-dotenv starlette
 
 Variables d'environnement :
     SERVICENOW_INSTANCE_URL   ex: https://votreinstance.service-now.com
@@ -39,11 +39,8 @@ SERVICENOW_CLIENT_SECRET = os.environ["SERVICENOW_CLIENT_SECRET"]
 SERVICENOW_USERNAME      = os.environ.get("SERVICENOW_USERNAME")
 SERVICENOW_PASSWORD      = os.environ.get("SERVICENOW_PASSWORD")
 
-TRANSPORT = os.environ.get("TRANSPORT", "stdio")
-PORT      = int(os.environ.get("PORT", 8000))
-
-# Token secret pour sécuriser l'endpoint HTTP en production.
-# En mode stdio (local), cette variable peut être absente — c'est normal.
+TRANSPORT        = os.environ.get("TRANSPORT", "stdio")
+PORT             = int(os.environ.get("PORT", 8000))
 MCP_SECRET_TOKEN = os.environ.get("MCP_SECRET_TOKEN")
 
 if TRANSPORT == "sse" and not MCP_SECRET_TOKEN:
@@ -55,41 +52,12 @@ if TRANSPORT == "sse" and not MCP_SECRET_TOKEN:
 # Tables autorisées
 ALLOWED_TABLES = {"incident", "change_request", "sc_request", "problem"}
 
-# --- Authentification du serveur MCP ---------------------------------------
-
-def verify_token(request) -> bool:
-    """
-    Vérifie le token d authentification sur chaque requête entrante.
-    Accepte deux méthodes :
-      1. Header Authorization: Bearer <token>  (Claude Desktop, curl)
-      2. Query parameter ?token=<token>        (API Anthropic beta mcp-client)
-
-    En mode stdio (local), la vérification est désactivée.
-    """
-    if TRANSPORT != "sse":
-        return True
-
-    # Méthode 1 : header Authorization
-    auth_header = request.headers.get("authorization", "")
-    if auth_header.startswith("Bearer "):
-        token = auth_header.removeprefix("Bearer ").strip()
-        if token == MCP_SECRET_TOKEN:
-            return True
-
-    # Méthode 2 : query parameter ?token=...
-    token = request.query_params.get("token", "")
-    if token == MCP_SECRET_TOKEN:
-        return True
-
-    return False
-
 # --- Gestion du token OAuth ServiceNow ------------------------------------
 
 _token_cache = {"access_token": None, "expires_at": 0}
 
 
 def get_access_token() -> str:
-    """Récupère un token OAuth valide, en le renouvelant si besoin."""
     now = time.time()
     if _token_cache["access_token"] and now < _token_cache["expires_at"] - 30:
         return _token_cache["access_token"]
@@ -114,7 +82,6 @@ def get_access_token() -> str:
 
 
 def sn_request(method: str, path: str, **kwargs) -> dict:
-    """Effectue une requête authentifiée vers l'API REST ServiceNow."""
     headers = kwargs.pop("headers", {})
     headers["Authorization"] = f"Bearer {get_access_token()}"
     headers["Accept"] = "application/json"
@@ -135,11 +102,12 @@ def check_table_allowed(table: str) -> None:
 
 # --- Serveur MCP -----------------------------------------------------------
 
+# FastMCP sans auth= (le paramètre attend un AuthSettings, pas une fonction)
+# L'authentification est gérée par un middleware Starlette en mode production
 mcp = FastMCP(
     "servicenow",
     host="0.0.0.0" if TRANSPORT == "sse" else "127.0.0.1",
     port=PORT,
-    auth=verify_token if TRANSPORT == "sse" else None,
 )
 
 
@@ -220,8 +188,51 @@ def add_comment(table: str, sys_id: str, comment: str) -> dict:
     return data.get("result", {})
 
 
+# --- Middleware d'authentification (mode production uniquement) -------------
+
+def build_app_with_auth():
+    """
+    Enveloppe l'app ASGI de FastMCP dans un middleware Starlette
+    qui vérifie le token sur chaque requête.
+    Accepte le token :
+      - en query parameter : ?token=<token>
+      - en header          : Authorization: Bearer <token>
+    """
+    from starlette.applications import Starlette
+    from starlette.middleware.base import BaseHTTPMiddleware
+    from starlette.responses import JSONResponse
+
+    class TokenAuthMiddleware(BaseHTTPMiddleware):
+        async def dispatch(self, request, call_next):
+            # Méthode 1 : query parameter ?token=...
+            token = request.query_params.get("token", "")
+
+            # Méthode 2 : header Authorization: Bearer ...
+            if not token:
+                auth = request.headers.get("authorization", "")
+                if auth.startswith("Bearer "):
+                    token = auth.removeprefix("Bearer ").strip()
+
+            if token != MCP_SECRET_TOKEN:
+                return JSONResponse(
+                    {"error": "Unauthorized", "detail": "Token invalide ou manquant."},
+                    status_code=401,
+                )
+            return await call_next(request)
+
+    # Récupère l'app ASGI interne de FastMCP
+    inner_app = mcp.streamable_http_app()
+
+    app = Starlette()
+    app.add_middleware(TokenAuthMiddleware)
+    app.mount("/", inner_app)
+    return app
+
+
 if __name__ == "__main__":
     if TRANSPORT == "sse":
-        mcp.run(transport="streamable-http")
+        import uvicorn
+        app = build_app_with_auth()
+        uvicorn.run(app, host="0.0.0.0", port=PORT)
     else:
         mcp.run()
