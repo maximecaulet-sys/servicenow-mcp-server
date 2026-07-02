@@ -11,7 +11,7 @@ Variables d'environnement :
     SERVICENOW_USERNAME
     SERVICENOW_PASSWORD
     MCP_SECRET_TOKEN          token Bearer pour sécuriser l'endpoint HTTP
-                              (obligatoire en mode SSE/production, ignoré en stdio)
+                              (obligatoire en mode production, ignoré en stdio)
     PORT                      port d'écoute (fourni automatiquement par Railway)
 
 Lancement local (stdio, pas d'auth nécessaire) :
@@ -59,20 +59,29 @@ ALLOWED_TABLES = {"incident", "change_request", "sc_request", "problem"}
 
 def verify_token(request) -> bool:
     """
-    Vérifie le header Authorization: Bearer <token> sur chaque requête entrante.
-    Retourne True si le token est valide, False sinon.
+    Vérifie le token d authentification sur chaque requête entrante.
+    Accepte deux méthodes :
+      1. Header Authorization: Bearer <token>  (Claude Desktop, curl)
+      2. Query parameter ?token=<token>        (API Anthropic beta mcp-client)
 
-    En mode stdio (local), la vérification est désactivée — les connexions
-    viennent exclusivement de Claude Desktop sur la même machine.
+    En mode stdio (local), la vérification est désactivée.
     """
     if TRANSPORT != "sse":
-        return True  # Pas de vérification en local
+        return True
 
+    # Méthode 1 : header Authorization
     auth_header = request.headers.get("authorization", "")
-    if not auth_header.startswith("Bearer "):
-        return False
-    token = auth_header.removeprefix("Bearer ").strip()
-    return token == MCP_SECRET_TOKEN
+    if auth_header.startswith("Bearer "):
+        token = auth_header.removeprefix("Bearer ").strip()
+        if token == MCP_SECRET_TOKEN:
+            return True
+
+    # Méthode 2 : query parameter ?token=...
+    token = request.query_params.get("token", "")
+    if token == MCP_SECRET_TOKEN:
+        return True
+
+    return False
 
 # --- Gestion du token OAuth ServiceNow ------------------------------------
 
@@ -130,9 +139,6 @@ mcp = FastMCP(
     "servicenow",
     host="0.0.0.0" if TRANSPORT == "sse" else "127.0.0.1",
     port=PORT,
-    # Middleware d'authentification : vérifie le Bearer token sur chaque requête
-    # (FastMCP >= 1.3 supporte auth_middleware ; si votre version est plus ancienne,
-    # voir la note ci-dessous)
     auth=verify_token if TRANSPORT == "sse" else None,
 )
 

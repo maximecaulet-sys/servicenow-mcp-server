@@ -5,8 +5,9 @@ Prérequis :
     pip install anthropic python-dotenv
 
 Variables d'environnement (.env) :
-    ANTHROPIC_API_KEY   votre clé API Anthropic (console.anthropic.com)
-    MCP_SERVER_URL      URL du serveur MCP Railway (optionnel, sinon défaut ci-dessous)
+    ANTHROPIC_API_KEY    votre clé API Anthropic (console.anthropic.com)
+    MCP_SECRET_TOKEN     token secret fourni par l'administrateur du serveur MCP
+    MCP_SERVER_URL       URL du serveur MCP Railway (optionnel, sinon défaut ci-dessous)
 
 Utilisation :
     python servicenow_api_client.py
@@ -25,11 +26,6 @@ ANTHROPIC_API_KEY = os.environ.get("ANTHROPIC_API_KEY")
 if not ANTHROPIC_API_KEY:
     raise RuntimeError("Variable ANTHROPIC_API_KEY manquante dans le .env")
 
-MCP_SERVER_URL = os.environ.get(
-    "MCP_SERVER_URL",
-    "https://servicenow-mcp-server-production-b9fb.up.railway.app/mcp"
-)
-
 MCP_SECRET_TOKEN = os.environ.get("MCP_SECRET_TOKEN")
 if not MCP_SECRET_TOKEN:
     raise RuntimeError(
@@ -37,20 +33,26 @@ if not MCP_SECRET_TOKEN:
         "Récupérez ce token auprès de l'administrateur du serveur MCP."
     )
 
+MCP_SERVER_URL = os.environ.get(
+    "MCP_SERVER_URL",
+    "https://servicenow-mcp-server-production-b9fb.up.railway.app/mcp"
+)
+
 MODEL = "claude-sonnet-4-6"
 
 # --- Client ------------------------------------------------------------------
 
 client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
 
+# L API Anthropic beta ne supporte pas encore les headers custom dans mcp_servers.
+# Le token est passé en query parameter dans l URL : ?token=...
+_server_url_with_token = f"{MCP_SERVER_URL}?token={MCP_SECRET_TOKEN}"
+
 MCP_SERVERS = [
     {
         "type": "url",
-        "url": MCP_SERVER_URL,
+        "url": _server_url_with_token,
         "name": "servicenow",
-        "headers": {
-            "Authorization": f"Bearer {MCP_SECRET_TOKEN}",
-        },
     }
 ]
 
@@ -73,31 +75,30 @@ def ask(question: str) -> str:
     return "\n".join(texts)
 
 
-# --- Exemples de requêtes ----------------------------------------------------
+# --- Interface interactive ---------------------------------------------------
 
 if __name__ == "__main__":
+    print("=" * 60)
+    print(" Assistant ServiceNow — propulsé par Claude")
+    print(" Tapez votre question en langage naturel.")
+    print(" Commandes : 'quitter' ou 'exit' pour arrêter.")
+    print("=" * 60)
 
-    exemples = [
-        # Lecture — incidents
-        "Cherche les 5 derniers incidents actifs, donne-moi leur numéro, "
-        "description courte et priorité.",
+    while True:
+        try:
+            question = input("\nVous : ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print("\nAu revoir !")
+            break
 
-        # Lecture — requests
-        "Liste les 3 dernières demandes (sc_request) créées en 2018, "
-        "avec leur numéro et description.",
+        if not question:
+            continue
 
-        # Analyse
-        "Combien d'incidents actifs de priorité 3 ou moins y a-t-il ? "
-        "Donne-moi juste le nombre.",
+        if question.lower() in ("quitter", "exit", "quit"):
+            print("Au revoir !")
+            break
 
-        # Création (commenté par défaut pour éviter les modifications accidentelles)
-        # "Crée un incident avec la description 'Test MCP API' et la priorité 3.",
-    ]
-
-    for i, question in enumerate(exemples, 1):
-        print(f"\n{'='*60}")
-        print(f"Question {i} : {question}")
-        print(f"{'='*60}")
+        print("\nClaude : ", end="", flush=True)
         try:
             reponse = ask(question)
             print(reponse)
