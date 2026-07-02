@@ -128,3 +128,60 @@ Le serveur MCP Railway est peut-être en train de redémarrer. Attends 30 second
 ## Contact
 
 Pour toute question ou problème d'accès, contacte l'administrateur du repo.
+
+## Roadmap — Prochaines étapes
+
+### 1. Sécuriser l'accès au serveur (prioritaire)
+
+Le serveur MCP Railway est actuellement **ouvert publiquement** — n'importe qui connaissant l'URL peut interroger ServiceNow. Avant tout déploiement plus large, il faut ajouter une authentification.
+
+**Ce qui est à faire :**
+- Générer un token secret (longue chaîne aléatoire)
+- Ajouter une vérification de ce token dans `servicenow_mcp_server.py` (header `Authorization: Bearer ...`)
+- Ajouter ce token en variable d'environnement sur Railway (`MCP_SECRET_TOKEN`)
+- Ajouter ce token dans le `.env` de chaque utilisateur autorisé (`MCP_SECRET_TOKEN=...`)
+
+Sans cette étape, l'URL du serveur ne doit pas être partagée publiquement.
+
+---
+
+### 2. Rendre l'accès plus simple (choisir une option)
+
+Aujourd'hui l'utilisation nécessite Python et un terminal. Deux pistes pour simplifier l'accès :
+
+#### Option A — Intégration dans Claude Desktop / Claude.ai
+
+Quand Anthropic supportera nativement les serveurs MCP distants via URL dans Claude Desktop et claude.ai (fonctionnalité en cours de déploiement), il suffira d'ajouter l'URL du serveur Railway dans les paramètres de chaque utilisateur :
+
+```json
+"mcpServers": {
+  "servicenow": {
+    "url": "https://servicenow-mcp-server-production-b9fb.up.railway.app/mcp",
+    "headers": {
+      "Authorization": "Bearer TON_SECRET_TOKEN"
+    }
+  }
+}
+```
+
+Chaque utilisateur pourra alors poser ses questions directement dans l'interface Claude, sans script Python ni terminal. C'est la solution la plus élégante à terme — à surveiller lors des mises à jour de Claude Desktop.
+
+#### Option B — Interface web dédiée
+
+Créer une petite application web (Flask ou FastAPI) hébergée sur Railway qui expose une interface simple dans le navigateur : un champ de texte pour poser une question, une zone de réponse. En arrière-plan, l'app appelle l'API Anthropic + le serveur MCP Railway.
+
+**Avantages :** accessible depuis n'importe quel navigateur, aucune installation requise pour les utilisateurs, contrôle total sur l'authentification et les droits d'accès.
+
+**Effort estimé :** 1 journée de développement.
+
+---
+
+### 3. Étendre les fonctionnalités du serveur MCP
+
+Le serveur actuel couvre 4 tables (`incident`, `change_request`, `sc_request`, `problem`) et 5 outils de base. Des évolutions possibles :
+
+- Ajouter de nouvelles tables (`kb_knowledge`, `cmdb_ci`, `sys_user`, etc.)
+- Ajouter un outil de suppression avec confirmation explicite
+- Filtrer les champs retournés par ServiceNow pour alléger les réponses
+- Ajouter de la pagination pour les recherches avec beaucoup de résultats
+- Gérer plusieurs instances ServiceNow depuis le même serveur MCP
