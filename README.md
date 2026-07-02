@@ -1,13 +1,34 @@
-# ServiceNow MCP Client
+# ServiceNow MCP — Assistant Claude
 
-Interface en ligne de commande pour interroger ServiceNow en langage naturel, propulsée par Claude (Anthropic).
+Interface en langage naturel pour interroger ServiceNow, propulsée par Claude (Anthropic).
+
+Deux modes d'utilisation :
+- **Claude Desktop** — questions directement dans l'interface Claude via un proxy local
+- **Terminal** — script Python interactif en ligne de commande
+
+## Architecture
+
+```
+─── Mode Claude Desktop (recommandé) ──────────────────────────────
+
+Claude Desktop  →  servicenow_mcp_proxy.py  →  Railway MCP server  →  ServiceNow
+  (questions          (local, stdio)            (cloud, sécurisé)
+ dans le chat)
+
+─── Mode Terminal ──────────────────────────────────────────────────
+
+servicenow_api_client.py  →  API Anthropic  →  Railway MCP server  →  ServiceNow
+     (ton terminal)              (cloud)         (cloud, sécurisé)
+```
+
+Le serveur MCP Railway est partagé entre les deux modes — une seule instance hébergée, accessible par token.
 
 ## Prérequis
 
 - Python 3.10 ou supérieur
 - Un compte Anthropic avec une clé API ([console.anthropic.com](https://console.anthropic.com))
-- Accès au repo GitHub (demander à l'administrateur)
 - Le token secret du serveur MCP (demander à l'administrateur)
+- Accès au repo GitHub (demander à l'administrateur)
 
 ## Installation
 
@@ -21,37 +42,90 @@ cd servicenow-mcp-server
 ### 2. Installer les dépendances
 
 ```bash
-pip install anthropic python-dotenv
+pip3 install "mcp[cli]" anthropic httpx python-dotenv
 ```
 
 ### 3. Créer le fichier `.env`
-
-Crée un fichier `.env` à la racine du projet :
 
 ```bash
 touch .env
 ```
 
-Ouvre-le et ajoute tes deux variables :
+Ajouter les deux variables :
 
 ```
 ANTHROPIC_API_KEY=sk-ant-xxxxxxxxxxxxxxxx
 MCP_SECRET_TOKEN=token_fourni_par_l_administrateur
 ```
 
-> 💡 **`ANTHROPIC_API_KEY`** : connecte-toi sur [console.anthropic.com](https://console.anthropic.com) > **API Keys** > **Create Key**.
+> 💡 **`ANTHROPIC_API_KEY`** : [console.anthropic.com](https://console.anthropic.com) > **API Keys** > **Create Key**
 >
-> 💡 **`MCP_SECRET_TOKEN`** : ce token sécurise l'accès au serveur ServiceNow. Il est fourni par l'administrateur du projet — ne le partage pas et ne le committe jamais dans Git.
+> 💡 **`MCP_SECRET_TOKEN`** : fourni par l'administrateur — ne pas partager, ne jamais committer dans Git
 
-### 4. Lancer le client
+---
+
+## Mode 1 — Claude Desktop (recommandé)
+
+Pose tes questions directement dans l'interface Claude Desktop. Claude interroge ServiceNow en temps réel et répond en langage naturel.
+
+### Configuration
+
+Ouvre le fichier `claude_desktop_config.json` :
+
+```bash
+open "/Users/ton_nom/Library/Application Support/Claude/claude_desktop_config.json"
+```
+
+Ajoute le bloc `mcpServers` en respectant la structure existante :
+
+```json
+{
+  "...autres paramètres existants...",
+  "mcpServers": {
+    "servicenow": {
+      "command": "python3",
+      "args": ["/chemin/absolu/vers/servicenow_mcp_proxy.py"]
+    }
+  }
+}
+```
+
+> ⚠️ Remplace `/chemin/absolu/vers/` par le chemin réel vers le dossier cloné.
+> Sur Mac : `/Users/ton_nom/Claude integration/servicenow_mcp_proxy.py`
+
+Quitte Claude Desktop (**Cmd+Q**) puis relance-le.
+
+### Utilisation
+
+Une fois configuré, pose tes questions directement dans Claude Desktop :
+
+```
+Cherche les 5 derniers incidents actifs de priorité 1
+Donne-moi le détail de l'incident INC0010001
+Liste les demandes de changement ouvertes
+Combien d'incidents actifs sans assigné en ce moment ?
+Crée un incident pour une panne réseau, priorité 2
+```
+
+Claude appelle ServiceNow automatiquement et te répond dans le chat.
+
+> **Pourquoi un proxy et pas une URL directe ?**
+> Claude Desktop ne supporte pas encore le format `"url"` pour les serveurs MCP distants
+> (disponible uniquement dans l'API Anthropic). Le proxy `servicenow_mcp_proxy.py` fait le
+> pont : il parle stdio avec Claude Desktop, et streamable-HTTP avec Railway.
+> Quand Claude Desktop supportera les URLs distantes, le proxy ne sera plus nécessaire.
+
+---
+
+## Mode 2 — Terminal
+
+Pour les utilisateurs sans Claude Desktop, ou pour des scripts automatisés.
 
 ```bash
 python3 servicenow_api_client.py
 ```
 
-## Utilisation
-
-Une fois lancé, le script affiche un prompt interactif dans le terminal :
+Interface interactive dans le terminal :
 
 ```
 ============================================================
@@ -63,16 +137,11 @@ Une fois lancé, le script affiche un prompt interactif dans le terminal :
 Vous : Cherche les 5 derniers incidents actifs
 Claude : ...
 
-Vous : Donne-moi le détail de INC0010001
-Claude : ...
-
 Vous : quitter
 Au revoir !
 ```
 
-> ⚠️ **Les questions se posent dans le terminal**, pas dans une interface graphique ou dans Claude.ai. C'est une interface en ligne de commande uniquement.
-
-Tape ta question en langage naturel et appuie sur Entrée. Claude interroge ServiceNow et te répond directement. Pour terminer la session, tape `quitter` ou `exit`.
+---
 
 ## Exemples de questions
 
@@ -83,110 +152,101 @@ Liste les demandes de changement ouvertes
 Y a-t-il des incidents de priorité 1 en cours ?
 Combien d'incidents actifs y a-t-il en ce moment ?
 Crée un incident avec la description "Problème réseau" et la priorité 2
+Quels sont les problèmes ouverts sans assigné ?
 ```
-
-## Architecture
-
-Ce projet propose deux façons d'interroger ServiceNow, toutes les deux via le terminal :
-
-```
-─── Option 1 : Client Python → Railway (recommandé) ───────────────
-
-servicenow_api_client.py  →  API Anthropic (Claude)  →  Serveur MCP Railway  →  ServiceNow
-     (ton terminal)               (cloud)               (cloud, sécurisé)        (cloud)
-
-─── Option 2 : Serveur local (Claude Desktop uniquement) ───────────
-
-Claude Desktop  →  servicenow_mcp_server.py (local)  →  ServiceNow
-  (questions                 (ton Mac)                   (cloud)
- dans le chat)
-```
-
-**Option 1 — `servicenow_api_client.py` (ce README)**
-Tu lances le script dans ton terminal, tu poses tes questions en langage naturel, Claude répond. Le serveur MCP tourne sur Railway — tu n'as pas à t'en occuper. C'est la méthode recommandée pour tous les utilisateurs.
-
-**Option 2 — Claude Desktop**
-Réservée à l'administrateur du projet. Nécessite d'avoir Python et le repo installés localement, et une configuration spécifique de Claude Desktop (`claude_desktop_config.json`). Permet de poser les questions directement dans l'interface Claude Desktop plutôt que dans le terminal.
-
-> Dans les deux cas, **les questions se posent en ligne de commande ou dans Claude Desktop** — il n'y a pas d'interface web disponible pour l'instant.
-
-## Dépannage
-
-**`ModuleNotFoundError: No module named 'anthropic'`**
-```bash
-pip install anthropic python-dotenv
-```
-
-**`RuntimeError: Variable ANTHROPIC_API_KEY manquante`**
-Vérifie que ton fichier `.env` existe à la racine du projet et contient bien `ANTHROPIC_API_KEY=...`.
-
-**`RuntimeError: Variable MCP_SECRET_TOKEN manquante`**
-Le token secret est requis pour accéder au serveur. Demande-le à l'administrateur du repo et ajoute-le dans ton `.env` : `MCP_SECRET_TOKEN=...`.
-
-**`Erreur API Anthropic : 401`**
-Ta clé API Anthropic est invalide ou expirée. Génères-en une nouvelle sur [console.anthropic.com](https://console.anthropic.com).
-
-**`Erreur API Anthropic : 400 - Error while communicating with MCP server`**
-Deux causes possibles : le token `MCP_SECRET_TOKEN` est incorrect, ou le serveur Railway est temporairement indisponible. Vérifie le token puis réessaie dans quelques instants.
-
-**La réponse est vide ou incohérente**
-Le serveur MCP Railway est peut-être en train de redémarrer. Attends 30 secondes et réessaie.
-
-## Contact
-
-Pour toute question, problème d'accès, ou pour obtenir le `MCP_SECRET_TOKEN`, contacte l'administrateur du repo.
-
-## Roadmap — Prochaines étapes
-
-### 1. ✅ Sécuriser l'accès au serveur
-
-Le serveur MCP Railway est désormais **protégé par un token Bearer**. Chaque requête vers le serveur doit inclure le header `Authorization: Bearer <token>`. Sans ce token, l'accès est refusé.
-
-Ce qui a été mis en place :
-- Token secret généré et stocké dans les variables d'environnement Railway (`MCP_SECRET_TOKEN`)
-- Vérification du token dans `servicenow_mcp_server.py` sur chaque requête entrante
-- Le client `servicenow_api_client.py` envoie automatiquement le token depuis le `.env`
-- En mode local (Claude Desktop / stdio), la vérification est désactivée — seules les connexions depuis la même machine sont acceptées
 
 ---
 
-### 2. Rendre l'accès plus simple (choisir une option)
+## Dépannage
 
-Aujourd'hui l'utilisation nécessite Python et un terminal. Deux pistes pour simplifier l'accès :
+**`ModuleNotFoundError: No module named 'mcp'`**
+```bash
+pip3 install "mcp[cli]" anthropic httpx python-dotenv
+```
 
-#### Option A — Intégration dans Claude Desktop / Claude.ai
+**`RuntimeError: Variable ANTHROPIC_API_KEY manquante`**
+Vérifie que le fichier `.env` existe à la racine du projet et contient `ANTHROPIC_API_KEY=...`.
 
-Quand Anthropic supportera nativement les serveurs MCP distants via URL dans Claude Desktop et claude.ai (fonctionnalité en cours de déploiement), il suffira d'ajouter l'URL du serveur Railway dans les paramètres de chaque utilisateur :
+**`RuntimeError: Variable MCP_SECRET_TOKEN manquante`**
+Le token secret est requis. Demande-le à l'administrateur et ajoute-le dans le `.env`.
 
+**Claude Desktop — "Certains serveurs MCP n'ont pas pu être chargés"**
+Le chemin dans `claude_desktop_config.json` est incorrect ou le fichier `.env` est absent.
+Vérifie que le chemin est absolu et que le `.env` est dans le même dossier que le proxy.
+
+**Claude Desktop — pas de réponse ServiceNow**
+Le proxy se connecte au serveur Railway au démarrage de Claude Desktop.
+Si Railway redéploie pendant que Claude Desktop tourne, redémarre Claude Desktop.
+
+**`Erreur API Anthropic : 400 - Connection error`**
+Le token `MCP_SECRET_TOKEN` est incorrect, ou le serveur Railway est indisponible.
+Vérifie le token puis réessaie dans quelques instants.
+
+**`Erreur API Anthropic : 401`**
+La clé API Anthropic est invalide ou expirée.
+Génères-en une nouvelle sur [console.anthropic.com](https://console.anthropic.com).
+
+---
+
+## Fichiers du projet
+
+| Fichier | Rôle |
+|---|---|
+| `servicenow_mcp_server.py` | Serveur MCP hébergé sur Railway — connecté à ServiceNow |
+| `servicenow_mcp_proxy.py` | Proxy local — relie Claude Desktop au serveur Railway |
+| `servicenow_api_client.py` | Client terminal — interface interactive en ligne de commande |
+| `requirements.txt` | Dépendances Python du serveur Railway |
+| `.env` | Variables locales (non commité dans Git) |
+
+---
+
+## Instance ServiceNow connectée
+
+L'instance cible est configurée côté Railway via la variable `SERVICENOW_INSTANCE_URL`.
+Pour changer d'instance, mettre à jour cette variable (et les credentials associés) dans
+les variables d'environnement du service Railway — Railway redéploie automatiquement.
+
+Instance actuellement configurée : voir les variables Railway du service `servicenow-mcp-server`.
+
+---
+
+## Contact
+
+Pour toute question, problème d'accès, ou pour obtenir le `MCP_SECRET_TOKEN`,
+contacte l'administrateur du repo.
+
+---
+
+## Roadmap
+
+### ✅ 1. Sécuriser l'accès au serveur
+
+Token Bearer implémenté. Chaque requête vers Railway est authentifiée.
+- Token vérifié côté serveur (query parameter `?token=...`)
+- Client terminal et proxy local envoient le token automatiquement depuis le `.env`
+- En mode local (stdio), la vérification est désactivée
+
+### ✅ 2. Connecter Claude Desktop via proxy local
+
+Le proxy `servicenow_mcp_proxy.py` permet à Claude Desktop de parler au serveur Railway
+sans supporter nativement les URLs distantes. Claude peut interroger ServiceNow
+directement depuis l'interface de chat.
+
+Quand Claude Desktop supportera le format `"url"` nativement, la config deviendra :
 ```json
 "mcpServers": {
   "servicenow": {
-    "url": "https://servicenow-mcp-server-production-b9fb.up.railway.app/mcp",
-    "headers": {
-      "Authorization": "Bearer TON_SECRET_TOKEN"
-    }
+    "url": "https://servicenow-mcp-server-production-b9fb.up.railway.app/mcp?token=..."
   }
 }
 ```
 
-Chaque utilisateur pourra alors poser ses questions directement dans l'interface Claude, sans script Python ni terminal. C'est la solution la plus élégante à terme — à surveiller lors des mises à jour de Claude Desktop.
+### 3. Étendre les fonctionnalités
 
-#### Option B — Interface web dédiée
+Tables actuellement autorisées : `incident`, `change_request`, `sc_request`, `problem`.
 
-Créer une petite application web (Flask ou FastAPI) hébergée sur Railway qui expose une interface simple dans le navigateur : un champ de texte pour poser une question, une zone de réponse. En arrière-plan, l'app appelle l'API Anthropic + le serveur MCP Railway.
-
-**Avantages :** accessible depuis n'importe quel navigateur, aucune installation requise pour les utilisateurs, contrôle total sur l'authentification et les droits d'accès.
-
-**Effort estimé :** 1 journée de développement.
-
----
-
-### 3. Étendre les fonctionnalités du serveur MCP
-
-Le serveur actuel couvre 4 tables (`incident`, `change_request`, `sc_request`, `problem`) et 5 outils de base. Des évolutions possibles :
-
-- Ajouter de nouvelles tables (`kb_knowledge`, `cmdb_ci`, `sys_user`, etc.)
-- Ajouter un outil de suppression avec confirmation explicite
-- Filtrer les champs retournés par ServiceNow pour alléger les réponses
-- Ajouter de la pagination pour les recherches avec beaucoup de résultats
-- Gérer plusieurs instances ServiceNow depuis le même serveur MCP
+Évolutions possibles :
+- Ajouter de nouvelles tables selon les besoins (`kb_knowledge`, `cmdb_ci`, etc.)
+- Filtrer les champs retournés pour alléger les réponses
+- Ajouter la pagination pour les recherches volumineuses
+- Gérer plusieurs instances ServiceNow depuis le même serveur
