@@ -47,7 +47,7 @@ if TRANSPORT == "sse" and not MCP_SECRET_TOKEN:
 ALLOWED_TABLES = {"sys_db_object", "sys_plugin", "sys_app",
                   "sys_user", "sys_dictionary",
                   "sys_script_client", "sys_script_include", "sys_script", "sys_ui_policy", "catalog_ui_policy_action_list", "sys_ui_action", "sys_ui_script",
-                  "sys_update_set", "workflow",
+                  "sys_update_set", "wf_workflow",
                   # --- ITSM : Service Management ---
                   "task",
                   "incident", "incident_task",
