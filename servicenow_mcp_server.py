@@ -44,7 +44,23 @@ if TRANSPORT == "sse" and not MCP_SECRET_TOKEN:
         "Ajoutez cette variable dans vos variables d'environnement Railway."
     )
 
-ALLOWED_TABLES = {"incident", "change_request", "sc_request", "problem"}
+ALLOWED_TABLES = {"sys_db_object", "sys_plugin", "sys_app",
+                  "sys_user", "sys_dictionary",
+                  "sys_script_client", "sys_script_include", "sys_script", "sys_ui_policy", "catalog_ui_policy_action_list", "sys_ui_action", "sys_ui_script",
+                  # --- ITSM : Service Management ---
+                  "task",
+                  "incident", "incident_task",
+                  "change_request", "change_task", "std_change_record_producer",
+                  "sc_request", "sc_req_item", "sc_task", "sc_cat_item", "sc_category",
+                  "problem", "problem_task",
+                  "kb_knowledge", "kb_knowledge_base", "kb_category", "kb_feedback", "kb_submission",
+                  # --- ITOM : Event Management ---
+                  "em_event", "em_alert",
+                  # --- ITAM : Asset Management ---
+                  "alm_hardware", "alm_asset", "alm_license", "ast_contract",
+                  # --- CMDB : Services ---
+                  "cmdb_ci_service",
+                  "cmdb_ci",}
 
 # --- OAuth ServiceNow ------------------------------------------------------
 
@@ -163,43 +179,43 @@ def get_record(table: str, sys_id: str) -> dict:
     check_table_allowed(table)
     return sn_request("GET", f"/api/now/table/{table}/{sys_id}").get("result", {})
 
-@mcp.tool()
-def create_record(table: str, fields: dict) -> dict:
-    """
-    Crée un nouvel enregistrement (ex: un incident).
+# @mcp.tool()
+# def create_record(table: str, fields: dict) -> dict:
+#     """
+#     Crée un nouvel enregistrement (ex: un incident).
 
-    Args:
-        table: nom de la table.
-        fields: dictionnaire des champs (ex: {"short_description": "...", "priority": "2"}).
-    """
-    check_table_allowed(table)
-    return sn_request("POST", f"/api/now/table/{table}", json=fields).get("result", {})
+#     Args:
+#         table: nom de la table.
+#         fields: dictionnaire des champs (ex: {"short_description": "...", "priority": "2"}).
+#     """
+#     check_table_allowed(table)
+#     return sn_request("POST", f"/api/now/table/{table}", json=fields).get("result", {})
 
-@mcp.tool()
-def update_record(table: str, sys_id: str, fields: dict) -> dict:
-    """
-    Met à jour un enregistrement existant.
+# @mcp.tool()
+# def update_record(table: str, sys_id: str, fields: dict) -> dict:
+#     """
+#     Met à jour un enregistrement existant.
 
-    Args:
-        table: nom de la table.
-        sys_id: identifiant unique de l'enregistrement.
-        fields: champs à mettre à jour.
-    """
-    check_table_allowed(table)
-    return sn_request("PATCH", f"/api/now/table/{table}/{sys_id}", json=fields).get("result", {})
+#     Args:
+#         table: nom de la table.
+#         sys_id: identifiant unique de l'enregistrement.
+#         fields: champs à mettre à jour.
+#     """
+#     check_table_allowed(table)
+#     return sn_request("PATCH", f"/api/now/table/{table}/{sys_id}", json=fields).get("result", {})
 
-@mcp.tool()
-def add_comment(table: str, sys_id: str, comment: str) -> dict:
-    """
-    Ajoute un commentaire à un enregistrement.
+# @mcp.tool()
+# def add_comment(table: str, sys_id: str, comment: str) -> dict:
+#     """
+#     Ajoute un commentaire à un enregistrement.
 
-    Args:
-        table: nom de la table.
-        sys_id: identifiant unique de l'enregistrement.
-        comment: texte du commentaire.
-    """
-    check_table_allowed(table)
-    return sn_request("PATCH", f"/api/now/table/{table}/{sys_id}", json={"comments": comment}).get("result", {})
+#     Args:
+#         table: nom de la table.
+#         sys_id: identifiant unique de l'enregistrement.
+#         comment: texte du commentaire.
+#     """
+#     check_table_allowed(table)
+#     return sn_request("PATCH", f"/api/now/table/{table}/{sys_id}", json={"comments": comment}).get("result", {})
 
 # --- Démarrage -------------------------------------------------------------
 
