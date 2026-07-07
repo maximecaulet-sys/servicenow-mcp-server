@@ -50,6 +50,7 @@ ALLOWED_TABLES = {
                     "sys_user", "sys_dictionary",
                     "sys_script_client", "sys_script_include", "sys_script", "sys_ui_policy", "catalog_ui_policy_action_list", "sys_ui_action", "sys_ui_script",
                     "sys_update_set", "wf_workflow", "sys_user_has_license", "sys_update_xml", "sys_history_set", "sys_history_line",
+                    "discovery_log_list",
                     # --- ITSM : Service Management ---
                     "task",
                     "incident", "incident_task",
@@ -63,7 +64,20 @@ ALLOWED_TABLES = {
                     "alm_hardware", "alm_asset", "alm_license", "ast_contract",
                     # --- CMDB ---
                     "cmdb_ci_service",
-                    "cmdb_ci"
+                    "cmdb_ci_service_business",
+                    "cmdb_ci",
+                    "cmdb_rel_ci",
+                    "cmdb_ci_class",
+                    # --- Security ---
+                    "sys_security_acl", "sys_user_has_role", "sys_user_role", "sys_user_group", "sys_properties",
+                    # --- Automatisation ---
+                    "sys_hub_flow", "sys_hub_action_type_definition", "sysauto_script", "sys_trigger",
+                    # --- Integration ---
+                    "sys_rest_message", "sys_web_service", "ecc_queue", "sys_data_source", "sys_transform_map", "sys_email_account",
+                    # --- Technical debt ---
+                    "sys_store_app", "sys_upgrade_history", "sys_choice",
+                    # --- Notification ---
+                    "sysevent_email_action", "sysevent"
                   }
 
 # --- OAuth ServiceNow ------------------------------------------------------
