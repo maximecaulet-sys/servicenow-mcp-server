@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<unload unload_date="2026-07-07 08:02:41">
+<sys_user action="INSERT_OR_UPDATE">
+<active>true</active>
+<agent_status/>
+<avatar/>
+<average_daily_fte/>
+<building display_value=""/>
+<calendar_integration>1</calendar_integration>
+<city/>
+<company display_value=""/>
+<cost_center display_value=""/>
+<country/>
+<date_format/>
+<default_perspective display_value=""/>
+<department display_value=""/>
+<edu_status>faculty</edu_status>
+<email/>
+<employee_number/>
+<enable_multifactor_authn>false</enable_multifactor_authn>
+<failed_attempts>0</failed_attempts>
+<fax/>
+<federated_id>5YRmPztpds/P+a7mXz26kGKJFA0PKZtT2sqj3pGS78w=</federated_id>
+<first_name>MCP</first_name>
+<gender/>
+<geolocation_tracked>false</geolocation_tracked>
+<home_phone/>
+<identity_type>unclassified</identity_type>
+<internal_integration_user>false</internal_integration_user>
+<introduction/>
+<last_login/>
+<last_login_device/>
+<last_login_time>2026-07-06 15:03:21</last_login_time>
+<last_name>Integration</last_name>
+<last_password/>
+<last_position_update/>
+<latitude/>
+<ldap_server display_value=""/>
+<location display_value=""/>
+<locked_out>false</locked_out>
+<longitude/>
+<manager display_value=""/>
+<middle_name/>
+<mobile_phone/>
+<name>MCP Integration</name>
+<notification>2</notification>
+<on_schedule/>
+<password_needs_reset>false</password_needs_reset>
+<phone/>
+<photo/>
+<preferred_language/>
+<primary_group display_value=""/>
+<roles/>
+<schedule display_value=""/>
+<source/>
+<state/>
+<street/>
+<sys_class_name>sys_user</sys_class_name>
+<sys_created_by>maxime.caulet</sys_created_by>
+<sys_created_on>2026-06-30 14:49:38</sys_created_on>
+<sys_domain>global</sys_domain>
+<sys_domain_path>/</sys_domain_path>
+<sys_id>92788a6193350b50a740f896b903d61f</sys_id>
+<sys_mod_count>10</sys_mod_count>
+<sys_updated_by>maxime.caulet</sys_updated_by>
+<sys_updated_on>2026-07-01 06:14:53</sys_updated_on>
+<time_format/>
+<time_sheet_policy display_value=""/>
+<time_zone/>
+<title/>
+<user_name>mcp.integration</user_name>
+<user_password>$s$ukESNw8Yq3lDZ3/pHu2Xm4aa/gPrfUindgqWH21KY70=$HFTCpjEAoDibDeJ9iGsLjf74352dDUR4uWDtT158gP0=</user_password>
+<vip>false</vip>
+<web_service_access_only>false</web_service_access_only>
+<zip/>
+</sys_user>
+</unload>
