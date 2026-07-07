@@ -13,7 +13,7 @@ Variables d'environnement :
     MCP_SECRET_TOKEN   token Bearer (obligatoire en production, ignoré en stdio)
     PORT               port d'écoute (fourni automatiquement par Railway)
 
-Lancement local   : python servicenow_mcp_server.py
+Lancement local   : python3 servicenow_mcp_server.py
 Lancement prod    : TRANSPORT=sse python servicenow_mcp_server.py
 """
 
@@ -53,7 +53,7 @@ ALLOWED_TABLES = {
                     "discovery_log_list",
                     # --- ITSM : Service Management ---
                     "task",
-                    "incident", "incident_task",
+                    "incident", "incident_task", "task_sla",
                     "change_request", "change_task", "std_change_record_producer",
                     "sc_request", "sc_req_item", "sc_task", "sc_cat_item", "sc_category",
                     "problem", "problem_task",
@@ -63,11 +63,7 @@ ALLOWED_TABLES = {
                     # --- ITAM : Asset Management ---
                     "alm_hardware", "alm_asset", "alm_license", "ast_contract",
                     # --- CMDB ---
-                    "cmdb_ci_service",
-                    "cmdb_ci_service_business",
-                    "cmdb_ci",
-                    "cmdb_rel_ci",
-                    "cmdb_ci_class",
+                    "cmdb_ci_service", "cmdb_ci_service_business", "cmdb_ci", "cmdb_rel_ci", "cmdb_ci_class",
                     # --- Security ---
                     "sys_security_acl", "sys_user_has_role", "sys_user_role", "sys_user_group", "sys_properties",
                     # --- Automatisation ---
