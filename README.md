@@ -152,8 +152,6 @@ Si Railway redéploie pendant que Claude Desktop tourne, redémarre Claude Deskt
 | `update_record` | Met à jour un enregistrement existant |
 | `add_comment` | Ajoute un commentaire à un enregistrement |
 
-Tables actuellement autorisées : `incident`, `change_request`, `sc_request`, `problem`.
-
 Pour ajouter des tables ou des outils, modifier `servicenow_mcp_server.py` et pousser sur GitHub.
 
 ---
