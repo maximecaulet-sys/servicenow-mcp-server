@@ -44,24 +44,27 @@ if TRANSPORT == "sse" and not MCP_SECRET_TOKEN:
         "Ajoutez cette variable dans vos variables d'environnement Railway."
     )
 
-ALLOWED_TABLES = {"sys_db_object", "sys_plugin", "sys_app",
-                  "sys_user", "sys_dictionary",
-                  "sys_script_client", "sys_script_include", "sys_script", "sys_ui_policy", "catalog_ui_policy_action_list", "sys_ui_action", "sys_ui_script",
-                  "sys_update_set", "wf_workflow", "sys_user_has_license",
-                  # --- ITSM : Service Management ---
-                  "task",
-                  "incident", "incident_task",
-                  "change_request", "change_task", "std_change_record_producer",
-                  "sc_request", "sc_req_item", "sc_task", "sc_cat_item", "sc_category",
-                  "problem", "problem_task",
-                  "kb_knowledge", "kb_knowledge_base", "kb_category", "kb_feedback", "kb_submission",
-                  # --- ITOM : Event Management ---
-                  "em_event", "em_alert",
-                  # --- ITAM : Asset Management ---
-                  "alm_hardware", "alm_asset", "alm_license", "ast_contract",
-                  # --- CMDB : Services ---
-                  "cmdb_ci_service",
-                  "cmdb_ci",}
+ALLOWED_TABLES = {
+                    # --- General ---
+                    "sys_db_object", "sys_plugin", "sys_app",
+                    "sys_user", "sys_dictionary",
+                    "sys_script_client", "sys_script_include", "sys_script", "sys_ui_policy", "catalog_ui_policy_action_list", "sys_ui_action", "sys_ui_script",
+                    "sys_update_set", "wf_workflow", "sys_user_has_license", "sys_update_xml", "sys_history_set", "sys_history_line",
+                    # --- ITSM : Service Management ---
+                    "task",
+                    "incident", "incident_task",
+                    "change_request", "change_task", "std_change_record_producer",
+                    "sc_request", "sc_req_item", "sc_task", "sc_cat_item", "sc_category",
+                    "problem", "problem_task",
+                    "kb_knowledge", "kb_knowledge_base", "kb_category", "kb_feedback", "kb_submission",
+                    # --- ITOM : Event Management ---
+                    "em_event", "em_alert",
+                    # --- ITAM : Asset Management ---
+                    "alm_hardware", "alm_asset", "alm_license", "ast_contract",
+                    # --- CMDB ---
+                    "cmdb_ci_service",
+                    "cmdb_ci"
+                  }
 
 # --- OAuth ServiceNow ------------------------------------------------------
 
