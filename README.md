@@ -23,6 +23,39 @@ Le serveur MCP tourne sur Railway — une seule instance hébergée, accessible 
 
 ---
 
+## Prérequis ServiceNow
+
+Avant d'installer le projet, deux éléments doivent être configurés sur l'instance ServiceNow cible.
+
+### 1. Créer le compte de service MCP
+
+Un compte utilisateur dédié (`mcp.integration`) est utilisé par le serveur Railway pour s'authentifier sur ServiceNow. Il est fourni sous forme de fichier XML à importer directement dans l'instance.
+
+Dans ServiceNow, aller dans **System Update Sets > Retrieved Update Sets > Import Update Set from XML**, importer le fichier `mcp_user.xml` présent dans le repo, puis prévisualiser et committer l'update set.
+
+Vérifier ensuite que le compte possède bien les rôles suivants :
+- `itil`
+- `web_service_admin`
+- `rest_service`
+
+### 2. Créer l'Application Registry OAuth
+
+Le serveur utilise OAuth 2.0 (grant_type password) pour s'authentifier. Aller dans **System OAuth > Application Registry > New**, choisir **Create an OAuth API endpoint for external clients**, et renseigner :
+
+| Champ | Valeur |
+|---|---|
+| Name | MCP Integration |
+| Client ID | (généré automatiquement — à copier dans Railway) |
+| Client Secret | (généré automatiquement — à copier dans Railway) |
+| **Auth Scope** | **`useraccount`** |
+
+> ⚠️ Le scope `useraccount` est obligatoire. Sans lui, l'API retourne une erreur 403
+> *"Access to unscoped api is not allowed"* et le serveur ne peut pas s'authentifier.
+
+Une fois l'application créée, reporter le **Client ID** et le **Client Secret** dans les variables d'environnement Railway (`SERVICENOW_CLIENT_ID` et `SERVICENOW_CLIENT_SECRET`).
+
+---
+
 ## Installation
 
 ### 1. Cloner le repo
@@ -151,6 +184,8 @@ Si Railway redéploie pendant que Claude Desktop tourne, redémarre Claude Deskt
 | `create_record` | Crée un nouvel enregistrement |
 | `update_record` | Met à jour un enregistrement existant |
 | `add_comment` | Ajoute un commentaire à un enregistrement |
+
+Tables actuellement autorisées : `incident`, `change_request`, `sc_request`, `problem`.
 
 Pour ajouter des tables ou des outils, modifier `servicenow_mcp_server.py` et pousser sur GitHub.
 
