@@ -144,6 +144,59 @@ Claude appelle ServiceNow automatiquement et répond dans le chat — aucune com
 
 ---
 
+## Configuration locale sans Railway
+
+Il est possible de faire tourner le serveur MCP directement sur ta machine, sans passer par Railway. Utile pour le développement, les tests, ou si tu ne veux pas héberger le serveur en ligne.
+
+Dans ce mode, Claude Desktop lance `servicenow_mcp_server.py` directement en stdio — le proxy n'est pas nécessaire, et le `MCP_SECRET_TOKEN` non plus (le serveur est local, la sécurité réseau ne s'applique pas).
+
+### 1. Créer le fichier `.env` local
+
+Le fichier `.env` doit contenir les credentials ServiceNow (et non plus seulement le token) :
+
+```
+SERVICENOW_INSTANCE_URL=https://ton-instance.service-now.com
+SERVICENOW_CLIENT_ID=ton_client_id
+SERVICENOW_CLIENT_SECRET=ton_client_secret
+SERVICENOW_USERNAME=mcp.integration
+SERVICENOW_PASSWORD=ton_mot_de_passe
+```
+
+### 2. Installer les dépendances
+
+```bash
+pip3 install "mcp[cli]" httpx python-dotenv
+```
+
+### 3. Configurer Claude Desktop
+
+Dans `claude_desktop_config.json`, pointer directement vers le serveur (pas le proxy) :
+
+```json
+"mcpServers": {
+  "servicenow": {
+    "command": "python3",
+    "args": ["/chemin/absolu/vers/servicenow_mcp_server.py"]
+  }
+}
+```
+
+Claude Desktop lance le serveur en mode stdio au démarrage. Le serveur détecte automatiquement l'absence de `TRANSPORT=sse` et démarre en mode local.
+
+### Comparaison des deux modes
+
+| | Mode Railway (recommandé) | Mode local |
+|---|---|---|
+| Serveur | Hébergé sur Railway | Sur ta machine |
+| Proxy | `servicenow_mcp_proxy.py` requis | Non nécessaire |
+| `MCP_SECRET_TOKEN` | Requis | Non nécessaire |
+| Credentials ServiceNow dans `.env` | Non (côté Railway) | Oui |
+| Disponible si laptop éteint | ✅ | ❌ |
+| Partageable avec des collègues | ✅ | ❌ |
+| Idéal pour | Production / usage quotidien | Développement / tests |
+
+---
+
 ## Dépannage
 
 **`ModuleNotFoundError: No module named 'mcp'`**
