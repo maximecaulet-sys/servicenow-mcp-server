@@ -84,7 +84,6 @@ def get_access_token() -> str:
     now = time.time()
     if _token_cache["access_token"] and now < _token_cache["expires_at"] - 30:
         return _token_cache["access_token"]
-
     payload = {
         "grant_type": "password" if SERVICENOW_USERNAME else "client_credentials",
         "client_id": SERVICENOW_CLIENT_ID,
@@ -93,81 +92,20 @@ def get_access_token() -> str:
     if SERVICENOW_USERNAME:
         payload["username"] = SERVICENOW_USERNAME
         payload["password"] = SERVICENOW_PASSWORD
-
-    try:
-        resp = httpx.post(
-            f"{SERVICENOW_INSTANCE_URL}/oauth_token.do",
-            data=payload,
-            timeout=10,
-        )
-        resp.raise_for_status()
-    except httpx.TimeoutException:
-        raise RuntimeError(
-            f"Impossible de contacter ServiceNow ({SERVICENOW_INSTANCE_URL}) : timeout. "
-            "Vérifiez que l'instance est accessible."
-        )
-    except httpx.ConnectError:
-        raise RuntimeError(
-            f"Impossible de se connecter à ServiceNow ({SERVICENOW_INSTANCE_URL}). "
-            "Vérifiez l'URL de l'instance et la connectivité réseau."
-        )
-    except httpx.HTTPStatusError as e:
-        raise RuntimeError(
-            f"Échec de l'authentification OAuth ServiceNow (HTTP {e.response.status_code}). "
-            "Vérifiez le Client ID, Client Secret, et que le scope 'useraccount' est activé."
-        )
-
+    resp = httpx.post(f"{SERVICENOW_INSTANCE_URL}/oauth_token.do", data=payload, timeout=10)
+    resp.raise_for_status()
     data = resp.json()
-    if "access_token" not in data:
-        raise RuntimeError(
-            f"Réponse OAuth invalide — token absent. Réponse : {str(data)[:200]}"
-        )
-
-    expires_in = int(data.get("expires_in") or 1800)
     _token_cache["access_token"] = data["access_token"]
-    _token_cache["expires_at"] = now + expires_in
+    _token_cache["expires_at"] = now + int(data.get("expires_in", 1800))
     return _token_cache["access_token"]
-
 
 def sn_request(method: str, path: str, **kwargs) -> dict:
     headers = kwargs.pop("headers", {})
     headers["Authorization"] = f"Bearer {get_access_token()}"
     headers["Accept"] = "application/json"
-    url = f"{SERVICENOW_INSTANCE_URL}{path}"
-
-    try:
-        resp = httpx.request(method, url, headers=headers, timeout=15, **kwargs)
-    except httpx.TimeoutException:
-        raise RuntimeError(
-            f"La requête vers ServiceNow a expiré ({url}). "
-            "L'instance est peut-être surchargée, réessayez dans quelques instants."
-        )
-    except httpx.ConnectError:
-        raise RuntimeError(
-            f"Impossible de se connecter à ServiceNow ({SERVICENOW_INSTANCE_URL}). "
-            "Vérifiez la connectivité réseau."
-        )
-
-    if resp.status_code == 401:
-        # Token expiré ou révoqué — on vide le cache pour forcer un renouvellement
-        _token_cache["access_token"] = None
-        _token_cache["expires_at"] = 0
-        raise RuntimeError(
-            "Token OAuth expiré ou révoqué. La prochaine requête renouvellera automatiquement le token."
-        )
-    if resp.status_code == 403:
-        raise RuntimeError(
-            f"Accès refusé à {path}. Le compte de service n'a pas les droits suffisants sur cette table."
-        )
-    if resp.status_code == 404:
-        raise RuntimeError(
-            f"Ressource introuvable : {path}. Vérifiez le nom de la table ou le sys_id."
-        )
+    resp = httpx.request(method, f"{SERVICENOW_INSTANCE_URL}{path}", headers=headers, timeout=15, **kwargs)
     if resp.status_code >= 400:
-        raise RuntimeError(
-            f"Erreur ServiceNow {resp.status_code} sur {path} : {resp.text[:300]}"
-        )
-
+        raise RuntimeError(f"ServiceNow API error {resp.status_code}: {resp.text[:500]}")
     return resp.json()
 
 def check_table_allowed(table: str) -> None:
@@ -227,20 +165,33 @@ mcp = FastMCP(
 )
 
 @mcp.tool()
-def search_records(table: str, query: str = "", limit: int = 10) -> list[dict]:
+def search_records(
+    table: str,
+    query: str = "",
+    limit: int = 10,
+    offset: int = 0,
+    fields: str = "",
+) -> list[dict]:
     """
     Recherche des enregistrements dans une table ServiceNow.
 
     Args:
-        table: nom de la table (ex: 'incident', 'change_request').
-        query: requête encodée ServiceNow (ex: 'active=true^priority=1').
-        limit: nombre maximum de résultats (par défaut 10, max 50).
+        table:  nom de la table (ex: 'incident', 'change_request').
+        query:  requête encodée ServiceNow (ex: 'active=true^priority=1').
+        limit:  nombre maximum de résultats (par défaut 10, max 50).
+        offset: index de départ pour la pagination (par défaut 0).
+                Exemple : limit=10 offset=10 → résultats 11 à 20.
+        fields: champs à retourner, séparés par des virgules.
+                Si vide, tous les champs sont retournés (réponse volumineuse).
+                Exemple : 'number,short_description,priority,state,assigned_to'
     """
     check_table_allowed(table)
     limit = min(limit, 50)
-    params = {"sysparm_limit": limit}
+    params: dict = {"sysparm_limit": limit, "sysparm_offset": offset}
     if query:
         params["sysparm_query"] = query
+    if fields:
+        params["sysparm_fields"] = fields
     return sn_request("GET", f"/api/now/table/{table}", params=params).get("result", [])
 
 @mcp.tool()
