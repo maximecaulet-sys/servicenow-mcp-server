@@ -55,6 +55,7 @@ MCP_SERVER_URL = os.environ.get(
     "MCP_SERVER_URL",
     "https://servicenow-mcp-server-production-b9fb.up.railway.app/mcp"
 )
+REMOTE_URL = f"{MCP_SERVER_URL}?token={MCP_SECRET_TOKEN}"
 RETRY_DELAYS = [2, 5, 15, 30]  # secondes entre chaque tentative de reconnexion
 
 
