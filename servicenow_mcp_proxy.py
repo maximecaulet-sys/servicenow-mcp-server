@@ -53,7 +53,7 @@ if not MCP_SECRET_TOKEN:
 
 MCP_SERVER_URL = os.environ.get(
     "MCP_SERVER_URL",
-    "https://servicenow-mcp-server-production-b9fb.up.railway.app"
+    "https://servicenow-mcp-server-production-b9fb.up.railway.app/mcp"
 )
 RETRY_DELAYS = [2, 5, 15, 30]  # secondes entre chaque tentative de reconnexion
 
