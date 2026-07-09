@@ -212,8 +212,7 @@ Le chemin dans `claude_desktop_config.json` est incorrect ou le fichier `.env` e
 Vérifie que le chemin est absolu et que le `.env` est dans le même dossier que le proxy.
 
 **Claude Desktop — pas de réponse ServiceNow**
-Le proxy se connecte au serveur Railway au démarrage de Claude Desktop.
-Si Railway redéploie pendant que Claude Desktop tourne, redémarre Claude Desktop.
+Le proxy se reconnecte automatiquement au serveur Railway en cas de coupure (redéploiement, timeout réseau). Si le problème persiste après quelques secondes, redémarre Claude Desktop.
 
 ---
 
@@ -230,17 +229,29 @@ Si Railway redéploie pendant que Claude Desktop tourne, redémarre Claude Deskt
 
 ## Outils disponibles
 
-| Outil | Description |
+| Outil | Paramètres | Description |
+|---|---|---|
+| `search_records` | `table`, `query`, `limit`, `offset`, `fields` | Recherche des enregistrements dans une table |
+| `get_record` | `table`, `sys_id` | Récupère un enregistrement complet par son sys_id |
+
+> `search_records` supporte la **pagination** via `offset` (ex: `limit=50, offset=50` → résultats 51 à 100)
+> et la **sélection de champs** via `fields` (ex: `fields="number,short_description,priority"`) pour des réponses plus légères.
+
+Les outils d'écriture (`create_record`, `update_record`, `add_comment`) sont présents dans le code mais désactivés volontairement — l'instance est actuellement en lecture seule. Pour les activer, décommenter les fonctions correspondantes dans `servicenow_mcp_server.py` et pousser sur GitHub.
+
+**Tables autorisées** (extraits principaux) :
+
+| Domaine | Tables |
 |---|---|
-| `search_records` | Recherche des enregistrements dans une table |
-| `get_record` | Récupère un enregistrement par son sys_id |
-| `create_record` | Crée un nouvel enregistrement |
-| `update_record` | Met à jour un enregistrement existant |
-| `add_comment` | Ajoute un commentaire à un enregistrement |
+| ITSM | `incident`, `incident_task`, `change_request`, `change_task`, `sc_request`, `sc_req_item`, `sc_task`, `sc_cat_item`, `problem`, `problem_task`, `task_sla` |
+| Knowledge | `kb_knowledge`, `kb_knowledge_base`, `kb_category`, `kb_feedback` |
+| CMDB | `cmdb_ci`, `cmdb_ci_service`, `cmdb_rel_ci`, `cmdb_ci_class` |
+| Assets | `alm_hardware`, `alm_asset`, `alm_license`, `ast_contract` |
+| ITOM | `em_event`, `em_alert` |
+| Intégration | `sys_rest_message`, `sys_web_service`, `sys_data_source`, `sys_transform_map` |
+| Configuration | `sys_script`, `sys_script_include`, `sys_ui_policy`, `wf_workflow`, `sys_update_set` |
 
-Tables actuellement autorisées : `incident`, `change_request`, `sc_request`, `problem`.
-
-Pour ajouter des tables ou des outils, modifier `servicenow_mcp_server.py` et pousser sur GitHub.
+Pour ajouter ou retirer des tables, modifier `ALLOWED_TABLES` dans `servicenow_mcp_server.py` et pousser sur GitHub.
 
 ---
 

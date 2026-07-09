@@ -45,54 +45,36 @@ if TRANSPORT == "sse" and not MCP_SECRET_TOKEN:
     )
 
 ALLOWED_TABLES = {
-    # --- General ---
-    "sys_db_object", "sys_plugin", "sys_app",
-    "sys_user", "sys_dictionary",
-    "sys_script_client", "sys_script_include", "sys_script", "sys_ui_policy",
-    "catalog_ui_policy_action_list", "sys_ui_action", "sys_ui_script",
-    "sys_update_set", "wf_workflow", "sys_user_has_license",
-    "sys_update_xml", "sys_history_set", "sys_history_line",
-    "discovery_log_list",
-
-    # --- ITSM : Service Management ---
-    "task",
-    "incident", "incident_task", "task_sla",
-    "change_request", "change_task", "std_change_record_producer",
-    "sc_request", "sc_req_item", "sc_task", "sc_cat_item", "sc_category",
-    "problem", "problem_task",
-    "kb_knowledge", "kb_knowledge_base", "kb_category", "kb_feedback", "kb_submission",
-
-    # --- ITOM : Event Management ---
-    "em_event", "em_alert",
-
-    # --- ITAM : Asset Management ---
-    "alm_hardware", "alm_asset", "alm_license", "ast_contract",
-
-    # --- CMDB ---
-    "cmdb_ci_service", "cmdb_ci_service_business", "cmdb_ci", "cmdb_rel_ci", "cmdb_ci_class",
-
-    # --- Groupes (lecture seule, pas de rôles ni ACL) ---
-    "sys_user_group",
-
-    # --- Automatisation ---
-    "sys_hub_flow", "sys_hub_action_type_definition", "sysauto_script", "sys_trigger",
-
-    # --- Integration ---
-    "sys_rest_message", "sys_web_service", "ecc_queue",
-    "sys_data_source", "sys_transform_map", "sys_email_account",
-
-    # --- Technical debt ---
-    "sys_store_app", "sys_upgrade_history", "sys_choice",
-
-    # --- Notification ---
-    "sysevent_email_action", "sysevent",
-
-    #   Tables retirées pour raisons de sécurité :
-    #   "sys_security_acl"   — définition des ACL (droits d'accès complets)
-    #   "sys_user_has_role"  — attribution des rôles utilisateurs
-    #   "sys_user_role"      — définition des rôles
-    #   "sys_properties"     — propriétés système (credentials, config sensible)
-}
+                    # --- General ---
+                    "sys_db_object", "sys_plugin", "sys_app",
+                    "sys_user", "sys_dictionary",
+                    "sys_script_client", "sys_script_include", "sys_script", "sys_ui_policy", "catalog_ui_policy_action_list", "sys_ui_action", "sys_ui_script",
+                    "sys_update_set", "wf_workflow", "sys_user_has_license", "sys_update_xml", "sys_history_set", "sys_history_line",
+                    "discovery_log_list",
+                    # --- ITSM : Service Management ---
+                    "task",
+                    "incident", "incident_task", "task_sla",
+                    "change_request", "change_task", "std_change_record_producer",
+                    "sc_request", "sc_req_item", "sc_task", "sc_cat_item", "sc_category",
+                    "problem", "problem_task",
+                    "kb_knowledge", "kb_knowledge_base", "kb_category", "kb_feedback", "kb_submission",
+                    # --- ITOM : Event Management ---
+                    "em_event", "em_alert",
+                    # --- ITAM : Asset Management ---
+                    "alm_hardware", "alm_asset", "alm_license", "ast_contract",
+                    # --- CMDB ---
+                    "cmdb_ci_service", "cmdb_ci_service_business", "cmdb_ci", "cmdb_rel_ci", "cmdb_ci_class",
+                    # --- Security ---
+                    "sys_security_acl", "sys_user_has_role", "sys_user_role", "sys_user_group", "sys_properties",
+                    # --- Automatisation ---
+                    "sys_hub_flow", "sys_hub_action_type_definition", "sysauto_script", "sys_trigger",
+                    # --- Integration ---
+                    "sys_rest_message", "sys_web_service", "ecc_queue", "sys_data_source", "sys_transform_map", "sys_email_account",
+                    # --- Technical debt ---
+                    "sys_store_app", "sys_upgrade_history", "sys_choice",
+                    # --- Notification ---
+                    "sysevent_email_action", "sysevent"
+                  }
 
 # --- OAuth ServiceNow ------------------------------------------------------
 
@@ -102,6 +84,7 @@ def get_access_token() -> str:
     now = time.time()
     if _token_cache["access_token"] and now < _token_cache["expires_at"] - 30:
         return _token_cache["access_token"]
+
     payload = {
         "grant_type": "password" if SERVICENOW_USERNAME else "client_credentials",
         "client_id": SERVICENOW_CLIENT_ID,
@@ -110,20 +93,81 @@ def get_access_token() -> str:
     if SERVICENOW_USERNAME:
         payload["username"] = SERVICENOW_USERNAME
         payload["password"] = SERVICENOW_PASSWORD
-    resp = httpx.post(f"{SERVICENOW_INSTANCE_URL}/oauth_token.do", data=payload, timeout=10)
-    resp.raise_for_status()
+
+    try:
+        resp = httpx.post(
+            f"{SERVICENOW_INSTANCE_URL}/oauth_token.do",
+            data=payload,
+            timeout=10,
+        )
+        resp.raise_for_status()
+    except httpx.TimeoutException:
+        raise RuntimeError(
+            f"Impossible de contacter ServiceNow ({SERVICENOW_INSTANCE_URL}) : timeout. "
+            "Vérifiez que l'instance est accessible."
+        )
+    except httpx.ConnectError:
+        raise RuntimeError(
+            f"Impossible de se connecter à ServiceNow ({SERVICENOW_INSTANCE_URL}). "
+            "Vérifiez l'URL de l'instance et la connectivité réseau."
+        )
+    except httpx.HTTPStatusError as e:
+        raise RuntimeError(
+            f"Échec de l'authentification OAuth ServiceNow (HTTP {e.response.status_code}). "
+            "Vérifiez le Client ID, Client Secret, et que le scope 'useraccount' est activé."
+        )
+
     data = resp.json()
+    if "access_token" not in data:
+        raise RuntimeError(
+            f"Réponse OAuth invalide — token absent. Réponse : {str(data)[:200]}"
+        )
+
+    expires_in = int(data.get("expires_in") or 1800)
     _token_cache["access_token"] = data["access_token"]
-    _token_cache["expires_at"] = now + int(data.get("expires_in", 1800))
+    _token_cache["expires_at"] = now + expires_in
     return _token_cache["access_token"]
+
 
 def sn_request(method: str, path: str, **kwargs) -> dict:
     headers = kwargs.pop("headers", {})
     headers["Authorization"] = f"Bearer {get_access_token()}"
     headers["Accept"] = "application/json"
-    resp = httpx.request(method, f"{SERVICENOW_INSTANCE_URL}{path}", headers=headers, timeout=15, **kwargs)
+    url = f"{SERVICENOW_INSTANCE_URL}{path}"
+
+    try:
+        resp = httpx.request(method, url, headers=headers, timeout=15, **kwargs)
+    except httpx.TimeoutException:
+        raise RuntimeError(
+            f"La requête vers ServiceNow a expiré ({url}). "
+            "L'instance est peut-être surchargée, réessayez dans quelques instants."
+        )
+    except httpx.ConnectError:
+        raise RuntimeError(
+            f"Impossible de se connecter à ServiceNow ({SERVICENOW_INSTANCE_URL}). "
+            "Vérifiez la connectivité réseau."
+        )
+
+    if resp.status_code == 401:
+        # Token expiré ou révoqué — on vide le cache pour forcer un renouvellement
+        _token_cache["access_token"] = None
+        _token_cache["expires_at"] = 0
+        raise RuntimeError(
+            "Token OAuth expiré ou révoqué. La prochaine requête renouvellera automatiquement le token."
+        )
+    if resp.status_code == 403:
+        raise RuntimeError(
+            f"Accès refusé à {path}. Le compte de service n'a pas les droits suffisants sur cette table."
+        )
+    if resp.status_code == 404:
+        raise RuntimeError(
+            f"Ressource introuvable : {path}. Vérifiez le nom de la table ou le sys_id."
+        )
     if resp.status_code >= 400:
-        raise RuntimeError(f"ServiceNow API error {resp.status_code}: {resp.text[:500]}")
+        raise RuntimeError(
+            f"Erreur ServiceNow {resp.status_code} sur {path} : {resp.text[:300]}"
+        )
+
     return resp.json()
 
 def check_table_allowed(table: str) -> None:
@@ -183,33 +227,20 @@ mcp = FastMCP(
 )
 
 @mcp.tool()
-def search_records(
-    table: str,
-    query: str = "",
-    limit: int = 10,
-    offset: int = 0,
-    fields: str = "",
-) -> list[dict]:
+def search_records(table: str, query: str = "", limit: int = 10) -> list[dict]:
     """
     Recherche des enregistrements dans une table ServiceNow.
 
     Args:
-        table:  nom de la table (ex: 'incident', 'change_request').
-        query:  requête encodée ServiceNow (ex: 'active=true^priority=1').
-        limit:  nombre maximum de résultats (par défaut 10, max 50).
-        offset: index de départ pour la pagination (par défaut 0).
-                Exemple : limit=10 offset=10 → résultats 11 à 20.
-        fields: champs à retourner, séparés par des virgules.
-                Si vide, tous les champs sont retournés (réponse volumineuse).
-                Exemple : 'number,short_description,priority,state,assigned_to'
+        table: nom de la table (ex: 'incident', 'change_request').
+        query: requête encodée ServiceNow (ex: 'active=true^priority=1').
+        limit: nombre maximum de résultats (par défaut 10, max 50).
     """
     check_table_allowed(table)
     limit = min(limit, 50)
-    params: dict = {"sysparm_limit": limit, "sysparm_offset": offset}
+    params = {"sysparm_limit": limit}
     if query:
         params["sysparm_query"] = query
-    if fields:
-        params["sysparm_fields"] = fields
     return sn_request("GET", f"/api/now/table/{table}", params=params).get("result", [])
 
 @mcp.tool()
