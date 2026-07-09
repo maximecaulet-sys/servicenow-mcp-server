@@ -45,36 +45,54 @@ if TRANSPORT == "sse" and not MCP_SECRET_TOKEN:
     )
 
 ALLOWED_TABLES = {
-                    # --- General ---
-                    "sys_db_object", "sys_plugin", "sys_app",
-                    "sys_user", "sys_dictionary",
-                    "sys_script_client", "sys_script_include", "sys_script", "sys_ui_policy", "catalog_ui_policy_action_list", "sys_ui_action", "sys_ui_script",
-                    "sys_update_set", "wf_workflow", "sys_user_has_license", "sys_update_xml", "sys_history_set", "sys_history_line",
-                    "discovery_log_list",
-                    # --- ITSM : Service Management ---
-                    "task",
-                    "incident", "incident_task", "task_sla",
-                    "change_request", "change_task", "std_change_record_producer",
-                    "sc_request", "sc_req_item", "sc_task", "sc_cat_item", "sc_category",
-                    "problem", "problem_task",
-                    "kb_knowledge", "kb_knowledge_base", "kb_category", "kb_feedback", "kb_submission",
-                    # --- ITOM : Event Management ---
-                    "em_event", "em_alert",
-                    # --- ITAM : Asset Management ---
-                    "alm_hardware", "alm_asset", "alm_license", "ast_contract",
-                    # --- CMDB ---
-                    "cmdb_ci_service", "cmdb_ci_service_business", "cmdb_ci", "cmdb_rel_ci", "cmdb_ci_class",
-                    # --- Security ---
-                    "sys_security_acl", "sys_user_has_role", "sys_user_role", "sys_user_group", "sys_properties",
-                    # --- Automatisation ---
-                    "sys_hub_flow", "sys_hub_action_type_definition", "sysauto_script", "sys_trigger",
-                    # --- Integration ---
-                    "sys_rest_message", "sys_web_service", "ecc_queue", "sys_data_source", "sys_transform_map", "sys_email_account",
-                    # --- Technical debt ---
-                    "sys_store_app", "sys_upgrade_history", "sys_choice",
-                    # --- Notification ---
-                    "sysevent_email_action", "sysevent"
-                  }
+    # --- General ---
+    "sys_db_object", "sys_plugin", "sys_app",
+    "sys_user", "sys_dictionary",
+    "sys_script_client", "sys_script_include", "sys_script", "sys_ui_policy",
+    "catalog_ui_policy_action_list", "sys_ui_action", "sys_ui_script",
+    "sys_update_set", "wf_workflow", "sys_user_has_license",
+    "sys_update_xml", "sys_history_set", "sys_history_line",
+    "discovery_log_list",
+
+    # --- ITSM : Service Management ---
+    "task",
+    "incident", "incident_task", "task_sla",
+    "change_request", "change_task", "std_change_record_producer",
+    "sc_request", "sc_req_item", "sc_task", "sc_cat_item", "sc_category",
+    "problem", "problem_task",
+    "kb_knowledge", "kb_knowledge_base", "kb_category", "kb_feedback", "kb_submission",
+
+    # --- ITOM : Event Management ---
+    "em_event", "em_alert",
+
+    # --- ITAM : Asset Management ---
+    "alm_hardware", "alm_asset", "alm_license", "ast_contract",
+
+    # --- CMDB ---
+    "cmdb_ci_service", "cmdb_ci_service_business", "cmdb_ci", "cmdb_rel_ci", "cmdb_ci_class",
+
+    # --- Groupes (lecture seule, pas de rôles ni ACL) ---
+    "sys_user_group",
+
+    # --- Automatisation ---
+    "sys_hub_flow", "sys_hub_action_type_definition", "sysauto_script", "sys_trigger",
+
+    # --- Integration ---
+    "sys_rest_message", "sys_web_service", "ecc_queue",
+    "sys_data_source", "sys_transform_map", "sys_email_account",
+
+    # --- Technical debt ---
+    "sys_store_app", "sys_upgrade_history", "sys_choice",
+
+    # --- Notification ---
+    "sysevent_email_action", "sysevent",
+
+    #   Tables retirées pour raisons de sécurité :
+    #   "sys_security_acl"   — définition des ACL (droits d'accès complets)
+    #   "sys_user_has_role"  — attribution des rôles utilisateurs
+    #   "sys_user_role"      — définition des rôles
+    #   "sys_properties"     — propriétés système (credentials, config sensible)
+}
 
 # --- OAuth ServiceNow ------------------------------------------------------
 
@@ -165,20 +183,33 @@ mcp = FastMCP(
 )
 
 @mcp.tool()
-def search_records(table: str, query: str = "", limit: int = 10) -> list[dict]:
+def search_records(
+    table: str,
+    query: str = "",
+    limit: int = 10,
+    offset: int = 0,
+    fields: str = "",
+) -> list[dict]:
     """
     Recherche des enregistrements dans une table ServiceNow.
 
     Args:
-        table: nom de la table (ex: 'incident', 'change_request').
-        query: requête encodée ServiceNow (ex: 'active=true^priority=1').
-        limit: nombre maximum de résultats (par défaut 10, max 50).
+        table:  nom de la table (ex: 'incident', 'change_request').
+        query:  requête encodée ServiceNow (ex: 'active=true^priority=1').
+        limit:  nombre maximum de résultats (par défaut 10, max 50).
+        offset: index de départ pour la pagination (par défaut 0).
+                Exemple : limit=10 offset=10 → résultats 11 à 20.
+        fields: champs à retourner, séparés par des virgules.
+                Si vide, tous les champs sont retournés (réponse volumineuse).
+                Exemple : 'number,short_description,priority,state,assigned_to'
     """
     check_table_allowed(table)
     limit = min(limit, 50)
-    params = {"sysparm_limit": limit}
+    params: dict = {"sysparm_limit": limit, "sysparm_offset": offset}
     if query:
         params["sysparm_query"] = query
+    if fields:
+        params["sysparm_fields"] = fields
     return sn_request("GET", f"/api/now/table/{table}", params=params).get("result", [])
 
 @mcp.tool()
