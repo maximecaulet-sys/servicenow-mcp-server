@@ -50,7 +50,7 @@ ALLOWED_TABLES = {
                     "sys_user", "sys_dictionary",
                     "sys_script_client", "sys_script_include", "sys_script", "sys_ui_policy", "catalog_ui_policy_action_list", "sys_ui_action", "sys_ui_script",
                     "sys_update_set", "wf_workflow", "sys_user_has_license", "sys_update_xml", "sys_history_set", "sys_history_line",
-                    "discovery_log_list",
+                    "discovery_log_list", "sysapproval_approver",
                     # --- ITSM : Service Management ---
                     "task",
                     "incident", "incident_task", "task_sla",
@@ -58,6 +58,7 @@ ALLOWED_TABLES = {
                     "sc_request", "sc_req_item", "sc_task", "sc_cat_item", "sc_category",
                     "problem", "problem_task",
                     "kb_knowledge", "kb_knowledge_base", "kb_category", "kb_feedback", "kb_submission",
+                    "chg_policy_approval", "chg_approval_def",
                     # --- ITOM : Event Management ---
                     "em_event", "em_alert",
                     # --- ITAM : Asset Management ---
