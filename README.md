@@ -31,7 +31,7 @@ Avant d'installer le projet, deux éléments doivent être configurés sur l'ins
 
 Un compte utilisateur dédié (`mcp.integration`) est utilisé par le serveur Railway pour s'authentifier sur ServiceNow. Il est fourni sous forme de fichier XML à importer directement dans l'instance.
 
-Dans ServiceNow, aller dans **System Update Sets > Retrieved Update Sets > Import Update Set from XML**, importer le fichier `mcp_user.xml` présent dans le repo, puis prévisualiser et committer l'update set.
+Importer le fichier `mcp_user.xml` présent dans le repo, dans la table `sys_user`.
 
 Vérifier ensuite que le compte possède bien les rôles suivants :
 - `itil`
