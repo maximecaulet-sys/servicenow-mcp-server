@@ -74,6 +74,10 @@ ALLOWED_TABLES = {
                     "sys_store_app", "sys_upgrade_history", "sys_choice",
                     # --- Notification ---
                     "sysevent_email_action", "sysevent"
+                    # --- Portals ---
+                    "sp_portal", "sp_page", "sp_theme", "sp_widget", "sp_instance", "sp_catalog", "sp_page_variant", 
+                    "sp_page_variant_component", "sp_menu", "sp_css", "sys_ux_experience", "sys_ux_page_registry", "sys_ux_client_script",
+                    "sys_ux_app_config", "sp_widget_instance_property"
                   }
 
 # --- OAuth ServiceNow ------------------------------------------------------
