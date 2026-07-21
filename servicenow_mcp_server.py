@@ -50,7 +50,7 @@ ALLOWED_TABLES = {
                     "sys_user", "sys_dictionary",
                     "sys_script_client", "sys_script_include", "sys_script", "sys_ui_policy", "catalog_ui_policy_action_list", "sys_ui_action", "sys_ui_script",
                     "sys_update_set", "wf_workflow", "sys_user_has_license", "sys_update_xml", "sys_history_set", "sys_history_line",
-                    "discovery_log_list", "sysapproval_approver",
+                    "discovery_log_list", "sysapproval_approver", 'cmn_cost_center',
                     # --- ITSM : Service Management ---
                     "task",
                     "incident", "incident_task", "task_sla",
