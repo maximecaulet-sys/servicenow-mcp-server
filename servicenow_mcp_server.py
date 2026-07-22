@@ -78,7 +78,9 @@ ALLOWED_TABLES = {
                     # --- Portals ---
                     "sp_portal", "sp_page", "sp_theme", "sp_widget", "sp_instance", "sp_catalog", "sp_page_variant", 
                     "sp_page_variant_component", "sp_menu", "sp_css", "sys_ux_experience", "sys_ux_page_registry", "sys_ux_client_script",
-                    "sys_ux_app_config", "sp_widget_instance_property"
+                    "sys_ux_app_config", "sp_widget_instance_property",
+                    # --- Reporting ---
+                    "sys_report", "pa_dashboards", "pa_widgets", "pa_cubes", "pa_xmr_signals"
                   }
 
 # --- OAuth ServiceNow ------------------------------------------------------
