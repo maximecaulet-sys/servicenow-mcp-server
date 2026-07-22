@@ -81,6 +81,9 @@ ALLOWED_TABLES = {
                     "sys_ux_app_config", "sp_widget_instance_property",
                     # --- Reporting ---
                     "sys_report", "pa_dashboards", "pa_widgets", "pa_cubes", "pa_xmr_signals"
+                    # --- Licences ---
+                    "sn_sub_man_st_subscription_overview", "sn_sub_man_st_subscription_license_detail_metric", "sn_sub_man_st_cloud_entitlement_subscription", 
+                    "subscription_entitlement_item", "subscription_entitlement_audit_log", "cmdb_ci_azure_subscription"
                   }
 
 # --- OAuth ServiceNow ------------------------------------------------------
