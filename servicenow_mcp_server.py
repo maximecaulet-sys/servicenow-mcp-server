@@ -58,7 +58,7 @@ ALLOWED_TABLES = {
                     "sc_request", "sc_req_item", "sc_task", "sc_cat_item", "sc_category",
                     "problem", "problem_task",
                     "kb_knowledge", "kb_knowledge_base", "kb_category", "kb_feedback", "kb_submission",
-                    "chg_policy_approval", "chg_approval_def",
+                    "chg_policy_approval", "chg_approval_def", "std_change_proposal",
                     # --- ITOM : Event Management ---
                     "em_event", "em_alert",
                     # --- ITAM : Asset Management ---
