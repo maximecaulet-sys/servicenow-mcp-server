@@ -204,6 +204,8 @@ def search_records(
         params["sysparm_fields"] = fields
     return sn_request("GET", f"/api/now/table/{table}", params=params).get("result", [])
 
+import aggregate_tool
+
 @mcp.tool()
 def get_record(table: str, sys_id: str) -> dict:
     """
@@ -215,6 +217,8 @@ def get_record(table: str, sys_id: str) -> dict:
     """
     check_table_allowed(table)
     return sn_request("GET", f"/api/now/table/{table}/{sys_id}").get("result", {})
+
+aggregate_tool.register(mcp, sn_request, check_table_allowed)
 
 # @mcp.tool()
 # def create_record(table: str, fields: dict) -> dict:
