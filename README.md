@@ -214,6 +214,30 @@ Vérifie que le chemin est absolu et que le `.env` est dans le même dossier que
 **Claude Desktop — pas de réponse ServiceNow**
 Le proxy se reconnecte automatiquement au serveur Railway en cas de coupure (redéploiement, timeout réseau). Si le problème persiste après quelques secondes, redémarre Claude Desktop.
 
+**`401 Unauthorized` / `{"error":"server_error","error_description":"access_denied"}` sur `/oauth_token.do`**
+Message générique côté ServiceNow qui masque la vraie cause. Vérifier dans cet ordre :
+1. Les variables d'environnement locales (`export SERVICENOW_...` dans le terminal, ou `.env`)
+   correspondent bien à l'instance visée — surtout après un changement d'instance sur
+   Railway, où les anciennes valeurs exportées dans un terminal resté ouvert peuvent
+   pointer vers une instance différente sans que l'erreur ne le dise explicitement.
+2. Le compte de service (`mcp.integration`) est actif, non verrouillé, mot de passe non
+   expiré, sans MFA activé (le grant `password` ne gère pas de second facteur).
+3. L'Application Registry existe et est active sur **cette** instance précise — un
+   `client_id`/`client_secret` créé sur une instance ne fonctionne jamais sur une autre.
+4. **L'Auth Scope de l'Application Registry est bien `useraccount`** (voir section
+   "Créer l'Application Registry OAuth" plus haut) — un scope manquant ou incorrect peut
+   produire ce même message générique selon la version de l'instance.
+5. En dernier recours, consulter **System Logs > All** filtré sur `oauth` : ServiceNow y
+   logue en interne une cause plus précise que celle renvoyée par l'API.
+
+**Tester `aggregate_records` isolément, sans terminal, une fois le serveur redéployé**
+Poser directement une question dans Claude Desktop (ou tout client connecté au serveur) :
+```
+Utilise aggregate_records sur sc_req_item, groupé par cat_item et cat_item.category
+```
+Si l'outil n'apparaît pas dans la liste des tools, le déploiement Railway n'a probablement
+pas pris en compte le dernier `git push` (vérifier les logs de build Railway).
+
 ---
 
 ## Fichiers du projet
@@ -222,6 +246,7 @@ Le proxy se reconnecte automatiquement au serveur Railway en cas de coupure (red
 |---|---|
 | `servicenow_mcp_server.py` | Serveur MCP hébergé sur Railway — connecté à ServiceNow |
 | `servicenow_mcp_proxy.py` | Proxy local — relie Claude Desktop au serveur Railway |
+| `aggregate_tool.py` | Outil `aggregate_records` — enregistré dans `servicenow_mcp_server.py`, whitelist de tables propre et indépendante |
 | `requirements.txt` | Dépendances Python du serveur Railway |
 | `.env` | Variables locales (non commité dans Git) |
 
@@ -233,9 +258,28 @@ Le proxy se reconnecte automatiquement au serveur Railway en cas de coupure (red
 |---|---|---|
 | `search_records` | `table`, `query`, `limit`, `offset`, `fields` | Recherche des enregistrements dans une table |
 | `get_record` | `table`, `sys_id` | Récupère un enregistrement complet par son sys_id |
+| `aggregate_records` | `table`, `group_by`, `query`, `count` | Agrège des enregistrements (équivalent `GlideAggregate`) via l'Aggregate API ServiceNow — un seul appel serveur, pas de pagination |
 
 > `search_records` supporte la **pagination** via `offset` (ex: `limit=50, offset=50` → résultats 51 à 100)
 > et la **sélection de champs** via `fields` (ex: `fields="number,short_description,priority"`) pour des réponses plus légères.
+
+> `aggregate_records` évite de devoir paginer des tables volumineuses (ex: `sc_req_item`
+> avec des dizaines de milliers de lignes) juste pour compter des occurrences. Exemple :
+> `aggregate_records(table="sc_req_item", group_by="cat_item,cat_item.category")` renvoie
+> directement, par item de catalogue, le nombre de demandes et la catégorie associée
+> (dot-walk supporté dans `group_by`), sans avoir à parcourir chaque enregistrement.
+> Utilisé notamment par le skill Claude "iteo-sn-taxonomy-analysis" (analyse de taxonomie
+> de catalogue).
+>
+> Cet outil a sa **propre whitelist de tables**, séparée et plus restreinte que
+> `ALLOWED_TABLES` (qui couvre `search_records`/`get_record`) : seules les tables de
+> volumétrie légitimes pour une agrégation (`sc_req_item`, `sc_request`, `sc_task`,
+> `incident`, `incident_task`, `change_request`, `change_task`, `problem`, `problem_task`)
+> y sont autorisées. Les tables sensibles ou techniques (`sys_user`, `sys_security_acl`,
+> `sys_properties`...) — autorisées en lecture enregistrement-par-enregistrement — ne
+> sont volontairement **pas** agrégeables. Pour ajouter une table à l'agrégation,
+> modifier `AGGREGATE_ALLOWED_TABLES` dans `aggregate_tool.py` (indépendant de
+> `ALLOWED_TABLES` dans `servicenow_mcp_server.py`).
 
 Les outils d'écriture (`create_record`, `update_record`, `add_comment`) sont présents dans le code mais désactivés volontairement — l'instance est actuellement en lecture seule. Pour les activer, décommenter les fonctions correspondantes dans `servicenow_mcp_server.py` et pousser sur GitHub.
 

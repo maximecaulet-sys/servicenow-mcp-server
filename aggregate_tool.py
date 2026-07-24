@@ -1,14 +1,20 @@
-"""
-Outil MCP d'agrégation ServiceNow (équivalent GlideAggregate), via l'Aggregate API
-native de ServiceNow (/api/now/stats/{table}) plutôt que le Table API paginé.
-
-Ce module n'exécute rien tout seul à l'import : il expose `register(mcp, sn_request,
-check_table_allowed)`, appelé depuis servicenow_mcp_server.py une fois que ces trois
-objets existent.
-"""
+AGGREGATE_ALLOWED_TABLES = {
+    "sc_req_item", "sc_request", "sc_task",
+    "incident", "incident_task",
+    "change_request", "change_task",
+    "problem", "problem_task",
+}
 
 
-def register(mcp, sn_request, check_table_allowed) -> None:
+def check_aggregate_table_allowed(table: str) -> None:
+    if table not in AGGREGATE_ALLOWED_TABLES:
+        raise ValueError(
+            f"Table '{table}' non autorisée pour l'agrégation. "
+            f"Tables disponibles : {sorted(AGGREGATE_ALLOWED_TABLES)}"
+        )
+
+
+def register(mcp, sn_request) -> None:
 
     @mcp.tool()
     def aggregate_records(
@@ -20,6 +26,7 @@ def register(mcp, sn_request, check_table_allowed) -> None:
         """
         Agrège des enregistrements ServiceNow (équivalent GlideAggregate) via l'Aggregate API.
         Lecture seule. Le comptage est fait côté serveur ServiceNow, pas de pagination nécessaire.
+        Restreint à un sous-ensemble de tables de volumétrie (voir AGGREGATE_ALLOWED_TABLES).
 
         Args:
             table:    nom de la table (ex: 'sc_req_item').
@@ -28,10 +35,10 @@ def register(mcp, sn_request, check_table_allowed) -> None:
             query:    requête encodée ServiceNow optionnelle (ex: 'active=true').
             count:    inclut le COUNT par groupe (par défaut True).
         """
-        check_table_allowed(table)
+        check_aggregate_table_allowed(table)
         params: dict = {
             "sysparm_group_by": group_by,
-            "sysparm_display_value": "all",  # renvoie value ET display_value pour chaque champ groupé
+            "sysparm_display_value": "all",
         }
         if count:
             params["sysparm_count"] = "true"
@@ -40,7 +47,6 @@ def register(mcp, sn_request, check_table_allowed) -> None:
 
         data = sn_request("GET", f"/api/now/stats/{table}", params=params).get("result", [])
 
-        # Aplati groupby_fields + stats en un dict par ligne, plus simple à consommer côté Claude
         rows = []
         for entry in data:
             row: dict = {}

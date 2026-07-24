@@ -218,7 +218,7 @@ def get_record(table: str, sys_id: str) -> dict:
     check_table_allowed(table)
     return sn_request("GET", f"/api/now/table/{table}/{sys_id}").get("result", {})
 
-aggregate_tool.register(mcp, sn_request, check_table_allowed)
+aggregate_tool.register(mcp, sn_request)
 
 # @mcp.tool()
 # def create_record(table: str, fields: dict) -> dict:
