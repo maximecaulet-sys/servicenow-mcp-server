@@ -362,6 +362,64 @@ ou comparer les deux dans la même conversation.
 
 ---
 
+## Héberger le dashboard HTML (skill iteo-sn-taxonomy-analysis)
+
+Le skill `iteo-sn-taxonomy-analysis` génère, en plus du classeur Excel, un dashboard HTML
+**100% statique** (aucun backend, aucune base de données — tout le JS vient de CDN : Chart.js,
+Lucide). Il peut être hébergé n'importe où capable de servir un fichier, ou simplement envoyé
+tel quel au client pour ouverture locale dans un navigateur.
+
+### Option A — Envoi direct (recommandé pour un livrable ponctuel)
+
+Ne rien héberger : envoyer le fichier `.html` directement au client (email, partage de
+fichier). Il s'ouvre tel quel dans n'importe quel navigateur, sans serveur. C'est l'option la
+plus simple tant qu'il n'y a pas besoin d'un lien partageable mis à jour dans la durée.
+
+### Option B — Nouveau service Railway (nginx statique)
+
+Un **service séparé** du serveur MCP (le serveur MCP parle streamable-HTTP/MCP, pas du
+contenu web classique). Un petit conteneur nginx suffit :
+
+```
+dashboard-hosting/
+├── Dockerfile
+└── public/
+    └── index.html   ← le fichier dashboard généré par le skill, renommé index.html
+```
+
+```dockerfile
+FROM nginx:alpine
+COPY public /usr/share/nginx/html
+EXPOSE 80
+```
+
+Créer un nouveau service Railway pointant vers ce dossier/repo ; Railway génère une URL du
+type `dashboard-hosting-production.up.railway.app`. Aucune variable d'environnement requise.
+
+### Option C — Serveur ITEO (futur)
+
+Copier le fichier dans le webroot de n'importe quel serveur web (nginx, Apache, IIS) :
+
+```bash
+cp "YYYYMMDD - Client x ITEO - Taxonomie Catalogue - Dashboard.html" /var/www/html/index.html
+```
+
+Fonctionne tel quel, aucune dépendance serveur particulière.
+
+### ⚠️ Sécurité — à traiter avant tout hébergement public (Options B et C)
+
+Le dashboard contient des données métier du client (volumes de demandes, catégories,
+anomalies). Hébergé sur une URL Railway ou un serveur accessible publiquement, il serait par
+défaut **accessible à quiconque a le lien, sans authentification**. Avant de déployer en
+public, ajouter une des protections suivantes :
+
+- Réutiliser le pattern de `MCP_SECRET_TOKEN` : un middleware qui vérifie un token en query
+  param avant de servir le fichier
+- Ou une Basic Auth nginx classique (`auth_basic` + `.htpasswd`), plus simple à mettre en
+  place pour du contenu statique
+
+---
+
 ## Contact
 
 Pour toute question, problème d'accès, ou pour obtenir le `MCP_SECRET_TOKEN`,
